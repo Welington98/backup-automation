@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/Welington98/backup-automation/compare/v1.0.0...v1.1.0) (2026-09-30)
+
+
+### Features
+
+* add list subcommand to backup-agent.sh ([caa8018](https://github.com/Welington98/backup-automation/commit/caa8018f683bf19d6a705ca66c91c368a12af9f6))
+
 # 1.0.0 (2026-09-30)
 
 
