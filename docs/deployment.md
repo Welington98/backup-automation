@@ -114,6 +114,9 @@ sudo /usr/local/bin/backup-agent-generate-psk.sh
 Cadastre esses valores no Zabbix Server: **Data collection > Hosts >
 `<host>` > Encryption > PSK**.
 
+> Guia completo (importar o template, criar o host, testar o envio manual,
+> tabela de itens e troubleshooting): [`docs/zabbix-monitoring.md`](zabbix-monitoring.md).
+
 ### 2.5 Testar
 
 Se ainda nao configurou a nuvem, desative `ENABLE_CLOUD_SYNC="false"`

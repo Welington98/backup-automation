@@ -5,6 +5,13 @@ versionamento seguindo [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+- `docs/zabbix-monitoring.md`: guia completo de configuracao do
+  monitoramento Zabbix — importar template, criar host (sem interface,
+  itens sao Trapper), cadastrar encryption PSK, variaveis do `backup.env`,
+  teste manual com `zabbix_sender`, tabela de todos os itens enviados pelo
+  `backup-agent.sh` e troubleshooting comum.
+
 ### Fixed
 - `os/linux/backup-agent.sh`: adicionado lock proprio (`flock` em
   `/var/lock/backup-agent.lock`) para impedir duas execucoes simultaneas
