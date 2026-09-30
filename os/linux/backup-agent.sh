@@ -8,10 +8,40 @@
 # editar a mao - ver .releaserc.json, plugin @semantic-release/exec).
 BACKUP_AGENT_VERSION="0.0.0-dev"
 
-if [ "$1" = "--version" ] || [ "$1" = "-v" ]; then
-    echo "backup-agent $BACKUP_AGENT_VERSION"
-    exit 0
-fi
+print_help() {
+    cat <<EOF
+backup-agent $BACKUP_AGENT_VERSION - backup dual-stage (Restic local -> nuvem) com telemetria Zabbix
+
+Uso:
+  backup-agent.sh              Executa o pipeline completo de backup
+  backup-agent.sh list         Lista os snapshots existentes (local e nuvem)
+  backup-agent.sh --version    Mostra a versao instalada e sai
+  backup-agent.sh --help       Mostra esta ajuda e sai
+
+Pipeline completo (sem argumentos):
+  1. Backup local                (restic backup)
+  2. Sincronizacao com a nuvem    (restic copy), se ENABLE_CLOUD_SYNC=true
+  3. Retencao / expurgo           (restic forget --prune), local e nuvem
+  4. Metricas para o Zabbix       (tamanho e snapshots, local e nuvem)
+
+Configuracao: /etc/backup-agent/backup.env
+Log:          \${LOG_PATH:-/var/log/backup-agent.log}
+
+Documentacao: docs/deployment.md, docs/zabbix-monitoring.md e
+docs/disaster-recovery.md no repositorio backup-automation.
+EOF
+}
+
+case "${1:-}" in
+    --version|-v)
+        echo "backup-agent $BACKUP_AGENT_VERSION"
+        exit 0
+        ;;
+    --help|-h)
+        print_help
+        exit 0
+        ;;
+esac
 
 set -o pipefail
 
@@ -36,6 +66,11 @@ if [ "$1" = "list" ]; then
         restic -r "$REPO_CLOUD" snapshots
     fi
     exit 0
+elif [ -n "${1:-}" ]; then
+    echo "[ERROR] Comando desconhecido: $1" >&2
+    echo "" >&2
+    print_help >&2
+    exit 1
 fi
 
 LOG_FILE="${LOG_PATH:-/var/log/backup-agent.log}"

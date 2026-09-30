@@ -38,6 +38,9 @@ sudo /usr/local/bin/backup-agent.sh
 
 # listar os snapshots existentes (local e nuvem, sem mexer no backup.env na mao)
 sudo /usr/local/bin/backup-agent.sh list
+
+# ver todos os comandos disponiveis
+backup-agent.sh --help
 ```
 
 Passo a passo completo: [`docs/deployment.md`](docs/deployment.md).
@@ -60,18 +63,19 @@ sudo os/linux/update.sh
 ```
 
 O `update.sh`:
+
 1. Recusa rodar se houver alteracoes locais nao commitadas no clone (pra
-   nao perder nada sem querer).
+ nao perder nada sem querer).
 2. `git fetch` + `git merge --ff-only` de `origin/main` — falha com
-   mensagem clara se o clone local divergiu do remoto, em vez de tentar
-   adivinhar um merge.
+ mensagem clara se o clone local divergiu do remoto, em vez de tentar
+ adivinhar um merge.
 3. Reaplica `backup-agent.sh` e `generate-psk.sh` em `/usr/local/bin`
-   (sem mexer em `backup.env`/`excludes.txt` ja configurados).
+ (sem mexer em `backup.env`/`excludes.txt` ja configurados).
 4. Avisa se `devops/zabbix/template_backup_agent.xml` mudou (lembrete pra
-   reimportar no Zabbix Server — ver
-   [`docs/zabbix-monitoring.md`](docs/zabbix-monitoring.md)).
+ reimportar no Zabbix Server — ver
+ [`docs/zabbix-monitoring.md`](docs/zabbix-monitoring.md)).
 5. Mostra a versao final com `backup-agent.sh --version`, pra confirmar
-   visualmente que a atualizacao realmente pegou.
+ visualmente que a atualizacao realmente pegou.
 
 ### Deploy via Ansible
 
@@ -110,3 +114,4 @@ Convencao de commits e o que cada tipo faz na versao: ver
 - [ ] Fase 2: emissao/renovacao dinamica de certificados via HashiCorp Vault PKI.
 - [ ] Fase 3: agente Windows (PowerShell).
 - [ ] Fase 4: agente macOS.
+
