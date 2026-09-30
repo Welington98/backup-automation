@@ -6,6 +6,14 @@ versionamento seguindo [SemVer](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- Metricas de tamanho e contagem de snapshots agora sao reportadas
+  **separadamente** para local e nuvem: `restic.repo.size` e
+  `restic.repo.snapshots` viraram `restic.repo.size.local`/`.cloud` e
+  `restic.repo.snapshots.local`/`.cloud` (`os/linux/backup-agent.sh`,
+  `devops/zabbix/template_backup_agent.xml`). Antes, com
+  `ENABLE_CLOUD_SYNC="true"`, so o tamanho da nuvem era reportado — o
+  repositorio local nunca aparecia. Validado com import real (create +
+  update) contra um Zabbix Server 6.0 em Docker.
 - `docs/zabbix-monitoring.md`: guia completo de configuracao do
   monitoramento Zabbix — importar template, criar host (sem interface,
   itens sao Trapper), cadastrar encryption PSK, variaveis do `backup.env`,

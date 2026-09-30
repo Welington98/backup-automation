@@ -66,12 +66,12 @@
                 </item>
                 <item>
                     <uuid>00ea8ea0208b4cb18ae22a4fd3e755cb</uuid>
-                    <name>Repository Size</name>
+                    <name>Local Repository Size</name>
                     <type>TRAP</type>
-                    <key>restic.repo.size</key>
+                    <key>restic.repo.size.local</key>
                     <value_type>UNSIGNED</value_type>
                     <units>B</units>
-                    <description>Tamanho total do repositorio restic (nuvem, ou local se ENABLE_CLOUD_SYNC=false)</description>
+                    <description>Tamanho total do repositorio restic local (REPO_LOCAL)</description>
                     <tags>
                         <tag>
                             <tag>component</tag>
@@ -81,12 +81,42 @@
                 </item>
                 <item>
                     <uuid>6562ac07a3264fbcb07087c75f635741</uuid>
-                    <name>Total Snapshots</name>
+                    <name>Local Snapshot Count</name>
                     <type>TRAP</type>
-                    <key>restic.repo.snapshots</key>
+                    <key>restic.repo.snapshots.local</key>
                     <value_type>UNSIGNED</value_type>
                     <units>uni</units>
-                    <description>Quantidade total de snapshots no repositorio monitorado</description>
+                    <description>Quantidade de snapshots no repositorio restic local (REPO_LOCAL)</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>backup-agent</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>22dccea941324408914e05a9d408344a</uuid>
+                    <name>Cloud Repository Size</name>
+                    <type>TRAP</type>
+                    <key>restic.repo.size.cloud</key>
+                    <value_type>UNSIGNED</value_type>
+                    <units>B</units>
+                    <description>Tamanho total do repositorio restic em nuvem (REPO_CLOUD). So enviado quando ENABLE_CLOUD_SYNC=true</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>backup-agent</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>56c93b9c71d942c7af0bfe758f1ef5cc</uuid>
+                    <name>Cloud Snapshot Count</name>
+                    <type>TRAP</type>
+                    <key>restic.repo.snapshots.cloud</key>
+                    <value_type>UNSIGNED</value_type>
+                    <units>uni</units>
+                    <description>Quantidade de snapshots no repositorio restic em nuvem (REPO_CLOUD). So enviado quando ENABLE_CLOUD_SYNC=true</description>
                     <tags>
                         <tag>
                             <tag>component</tag>

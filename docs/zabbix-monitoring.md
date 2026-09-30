@@ -120,8 +120,10 @@ Ou rode o agente completo e acompanhe o log (ver
 | `restic.backup.duration` | Sempre | segundos | Duracao total da execucao |
 | `restic.retention.local.status` | Sempre (Etapa 3) | `0`/`1` | Resultado do `forget --prune` no repositorio local |
 | `restic.retention.cloud.status` | Apenas se `ENABLE_CLOUD_SYNC="true"` | `0`/`1` | Resultado do `forget --prune` no repositorio em nuvem |
-| `restic.repo.size` | Se `restic stats` tiver sucesso (Etapa 4) | bytes | Tamanho total do repositorio monitorado (nuvem, ou local se `ENABLE_CLOUD_SYNC="false"`) |
-| `restic.repo.snapshots` | Se `restic snapshots` tiver sucesso (Etapa 4) | contagem | Quantidade de snapshots no repositorio monitorado |
+| `restic.repo.size.local` | Sempre, se `restic stats` tiver sucesso (Etapa 4) | bytes | Tamanho total do repositorio **local** (`REPO_LOCAL`) |
+| `restic.repo.snapshots.local` | Sempre, se `restic snapshots` tiver sucesso (Etapa 4) | contagem | Quantidade de snapshots no repositorio **local** |
+| `restic.repo.size.cloud` | Apenas se `ENABLE_CLOUD_SYNC="true"` e `restic stats` tiver sucesso | bytes | Tamanho total do repositorio **em nuvem** (`REPO_CLOUD`) |
+| `restic.repo.snapshots.cloud` | Apenas se `ENABLE_CLOUD_SYNC="true"` e `restic snapshots` tiver sucesso | contagem | Quantidade de snapshots no repositorio **em nuvem** |
 
 Triggers ja inclusos no template: falha em qualquer `*.status` (HIGH) e
 ausencia de dados por 26h em `restic.backup.status` (AVERAGE) — ver

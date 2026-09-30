@@ -50,6 +50,22 @@ send_zabbix() {
     fi
 }
 
+# Reporta tamanho e quantidade de snapshots de um repositorio (local ou
+# nuvem, identificados pelo sufixo) via restic.repo.size.<sufixo> e
+# restic.repo.snapshots.<sufixo>
+report_repo_metrics() {
+    local repo="$1"
+    local suffix="$2"
+
+    local stats_json total_size snapshot_count
+    stats_json=$(restic -r "$repo" stats --json 2>/dev/null)
+    total_size=$(echo "$stats_json" | jq -r '.total_size // empty')
+    snapshot_count=$(restic -r "$repo" snapshots --json 2>/dev/null | jq -r 'length')
+
+    [ -n "$total_size" ] && send_zabbix "restic.repo.size.${suffix}" "$total_size"
+    [ -n "$snapshot_count" ] && send_zabbix "restic.repo.snapshots.${suffix}" "$snapshot_count"
+}
+
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] === INICIANDO AGENTE DE BACKUP ===" >> "$LOG_FILE"
 
 # ------------------------------------------------------------------------------
@@ -133,12 +149,10 @@ fi
 # ------------------------------------------------------------------------------
 # ETAPA 4: METRICAS E ESTATISTICAS
 # ------------------------------------------------------------------------------
-TARGET_REPO="${REPO_CLOUD:-$REPO_LOCAL}"
-STATS_JSON=$(restic -r "$TARGET_REPO" stats --json 2>/dev/null)
-TOTAL_SIZE=$(echo "$STATS_JSON" | jq -r '.total_size // empty')
-SNAPSHOT_COUNT=$(restic -r "$TARGET_REPO" snapshots --json 2>/dev/null | jq -r 'length')
+report_repo_metrics "$REPO_LOCAL" "local"
 
-[ -n "$TOTAL_SIZE" ] && send_zabbix "restic.repo.size" "$TOTAL_SIZE"
-[ -n "$SNAPSHOT_COUNT" ] && send_zabbix "restic.repo.snapshots" "$SNAPSHOT_COUNT"
+if [ "$ENABLE_CLOUD_SYNC" = "true" ]; then
+    report_repo_metrics "$REPO_CLOUD" "cloud"
+fi
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] === EXECUCAO FINALIZADA ===" >> "$LOG_FILE"
