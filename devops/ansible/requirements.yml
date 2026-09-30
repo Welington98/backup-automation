@@ -1,0 +1,6 @@
+---
+# Instalar com: ansible-galaxy collection install -r requirements.yml
+collections:
+  - name: community.general
+    # Fornece o lookup community.general.bitwarden, usado para buscar
+    # segredos no Vaultwarden (compativel com a API do vault Bitwarden).

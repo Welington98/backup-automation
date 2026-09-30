@@ -1,0 +1,38 @@
+---
+backup_agent_config_dir: "/etc/backup-agent"
+backup_agent_bin_dir: "/usr/local/bin"
+
+backup_agent_env:
+  # Os valores "vault_*" vêm de lookup('community.general.bitwarden', ...)
+  # em group_vars/<cliente>.yml (segredos guardados no Vaultwarden da
+  # empresa, um item por cliente). O "CHANGE_ME" só aparece se o item não
+  # existir/o campo tiver nome errado - sirva de alerta, não de senha real.
+  RESTIC_PASSWORD: "{{ vault_restic_password | default('CHANGE_ME') }}"
+  BACKUP_TARGET_PATHS: "/var/univention-backup,/home,/etc"
+  BACKUP_TAG: "ucs-daily"
+  EXCLUDE_FILE: "/etc/backup-agent/excludes.txt"
+
+  REPO_LOCAL: "/mnt/backup-local/restic-repo"
+  KEEP_LOCAL_DAILY: 7
+
+  ENABLE_CLOUD_SYNC: "true"
+  REPO_CLOUD: "s3:s3.amazonaws.com/seu-bucket-backups/CLIENTE-CODE/{{ inventory_hostname }}"
+  AWS_ACCESS_KEY_ID: "{{ vault_aws_access_key | default('CHANGE_ME') }}"
+  AWS_SECRET_ACCESS_KEY: "{{ vault_aws_secret_key | default('CHANGE_ME') }}"
+
+  KEEP_CLOUD_DAILY: 7
+  KEEP_CLOUD_WEEKLY: 4
+  KEEP_CLOUD_MONTHLY: 12
+
+  ENABLE_ZABBIX: "true"
+  ZABBIX_SERVER: "zabbix.suaempresa.com"
+  ZABBIX_PORT: 10051
+  ZABBIX_HOSTNAME: "{{ inventory_hostname }}"
+
+  # Fase 1 (sem HashiCorp Vault): TLS via PSK estatica
+  ENABLE_ZABBIX_TLS: "true"
+  ZABBIX_TLS_PSK_IDENTITY: "backup-agent:{{ inventory_hostname }}"
+  ZABBIX_TLS_PSK_FILE: "/etc/backup-agent/certs/zabbix.psk"
+
+backup_agent_cron_hour: 3
+backup_agent_cron_minute: 30

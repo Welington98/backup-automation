@@ -1,0 +1,24 @@
+---
+# ==============================================================================
+# BACKUP AGENT - PLAYBOOK DE DEPLOY (Fase 1: sem HashiCorp Vault)
+#
+# Inventario multi-cliente: sempre informe -i apontando para o cliente
+# desejado (nunca ha um inventario "padrao" - ver inventory/README.md).
+#
+# Segredos vem do Vaultwarden da empresa (ver inventory/README.md) - exporte
+# BW_SESSION antes de rodar: export BW_SESSION=$(bw unlock --raw)
+#
+# Uso:
+#   ansible-playbook -i inventory/<cliente>/hosts.yml playbook.yml
+#   ansible-playbook -i inventory/<cliente>/hosts.yml playbook.yml --ask-become-pass
+#   ansible-playbook -i inventory/<cliente>/hosts.yml playbook.yml --limit <host>
+#   ansible-playbook -i inventory/<cliente>/hosts.yml playbook.yml --check --diff
+# ==============================================================================
+
+- name: Deploy do backup-agent nos servidores clientes
+  hosts: backup_clients
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: backup_agent

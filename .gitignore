@@ -1,0 +1,10 @@
+# Segredos vem do Vaultwarden via lookup do Ansible (nao ficam no repo).
+# BW_SESSION nunca deve ser commitado (variavel de ambiente, nao arquivo).
+*.retry
+
+# Configuracao real do agente (mantenha apenas o backup.env.template)
+backup.env
+
+# Editores / SO
+.DS_Store
+*.swp

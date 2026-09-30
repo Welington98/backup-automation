@@ -1,0 +1,79 @@
+---
+# Os campos vault_* de backup_agent_env vem de lookup('community.general.bitwarden', ...)
+# em group_vars/<cliente>.yml. Se BW_SESSION nao estiver setado ou o vault
+# do Vaultwarden estiver bloqueado, o Ansible falha exatamente na primeira
+# vez que resolve backup_agent_env (aqui no assert abaixo), com um erro do
+# `bw` tipo "Not logged in." ou "Vault is locked." - rode `bw login` e
+# `export BW_SESSION=$(bw unlock --raw)` antes de tentar de novo.
+- name: Falhar se segredos obrigatorios ainda estiverem com valor padrao
+  assert:
+    that:
+      - backup_agent_env.RESTIC_PASSWORD != 'CHANGE_ME'
+      - not (backup_agent_env.ENABLE_CLOUD_SYNC == 'true' and backup_agent_env.AWS_ACCESS_KEY_ID == 'CHANGE_ME')
+      - not (backup_agent_env.ENABLE_CLOUD_SYNC == 'true' and backup_agent_env.AWS_SECRET_ACCESS_KEY == 'CHANGE_ME')
+    fail_msg: >-
+      Segredos nao definidos para {{ inventory_hostname }}. Confira se o
+      item "backup-agent - {{ client_name | default('<cliente>') }}" existe
+      no Vaultwarden com todos os campos customizados esperados (ver
+      README.md do cliente em devops/ansible/inventory/<cliente>/).
+
+- name: Instalar pacotes necessarios
+  package:
+    name:
+      - restic
+      - zabbix-sender
+      - curl
+      - jq
+      - openssl
+    state: present
+
+- name: Criar diretorio de configuracao e certs
+  file:
+    path: "{{ backup_agent_config_dir }}/certs"
+    state: directory
+    mode: "0700"
+
+- name: Copiar script principal
+  copy:
+    src: "{{ role_path }}/../../../../os/linux/backup-agent.sh"
+    dest: "{{ backup_agent_bin_dir }}/backup-agent.sh"
+    mode: "0750"
+
+- name: Copiar script de geracao de PSK
+  copy:
+    src: "{{ role_path }}/../../../../os/linux/generate-psk.sh"
+    dest: "{{ backup_agent_bin_dir }}/backup-agent-generate-psk.sh"
+    mode: "0750"
+
+- name: Copiar lista de exclusoes
+  copy:
+    src: "{{ role_path }}/../../../../os/linux/excludes.txt"
+    dest: "{{ backup_agent_config_dir }}/excludes.txt"
+    mode: "0644"
+
+- name: Gerar backup.env a partir do template
+  template:
+    src: templates/backup.env.j2
+    dest: "{{ backup_agent_config_dir }}/backup.env"
+    mode: "0600"
+
+- name: Gerar PSK do Zabbix (se habilitado e ainda nao existir)
+  command: "{{ backup_agent_bin_dir }}/backup-agent-generate-psk.sh"
+  args:
+    creates: "{{ backup_agent_env.ZABBIX_TLS_PSK_FILE }}"
+  when: backup_agent_env.ENABLE_ZABBIX_TLS | default('false') == 'true'
+  register: backup_agent_psk_result
+  changed_when: "'SUCCESS' in backup_agent_psk_result.stdout"
+
+- name: Exibir PSK gerada (cadastrar manualmente no Zabbix Server)
+  debug:
+    msg: "{{ backup_agent_psk_result.stdout_lines }}"
+  when: backup_agent_psk_result is defined and backup_agent_psk_result.stdout is defined
+
+- name: Agendar execucao diaria via cron
+  cron:
+    name: "backup-agent daily run"
+    minute: "{{ backup_agent_cron_minute }}"
+    hour: "{{ backup_agent_cron_hour }}"
+    job: "{{ backup_agent_bin_dir }}/backup-agent.sh > /dev/null 2>&1"
+    user: root

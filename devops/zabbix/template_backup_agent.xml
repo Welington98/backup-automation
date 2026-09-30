@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<zabbix_export>
+    <version>6.0</version>
+    <template_groups>
+        <template_group>
+            <uuid>eefa430378e54be5b8dddd652693dbd2</uuid>
+            <name>Templates/Backup</name>
+        </template_group>
+    </template_groups>
+    <templates>
+        <template>
+            <uuid>dbcec913dbc440fea76f85d976a74243</uuid>
+            <template>Backup Agent</template>
+            <name>Backup Agent</name>
+            <description>Template Zabbix Trapper para o backup-agent (Restic dual-stage). Requer que o host esteja configurado com encryption PSK compativel com o ZABBIX_TLS_PSK_IDENTITY/ZABBIX_TLS_PSK_FILE definidos em backup.env.</description>
+            <groups>
+                <group>
+                    <name>Templates/Backup</name>
+                </group>
+            </groups>
+            <items>
+                <item>
+                    <uuid>7e2c13f8c6474f659adc1c24398bed54</uuid>
+                    <name>Backup Status</name>
+                    <type>TRAP</type>
+                    <key>restic.backup.status</key>
+                    <value_type>UNSIGNED</value_type>
+                    <description>1 = backup e sincronizacao concluidos com sucesso, 0 = falha</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>backup-agent</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>c7a86c724bca4328a0ad82b5f6ef98cb</uuid>
+                            <expression>last(/Backup Agent/restic.backup.status)=0</expression>
+                            <name>Backup Agent - Execution Failed on {HOST.NAME}</name>
+                            <priority>HIGH</priority>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>f9d386ce1ccb4af486562e467fab6db1</uuid>
+                    <name>Backup Duration</name>
+                    <type>TRAP</type>
+                    <key>restic.backup.duration</key>
+                    <value_type>UNSIGNED</value_type>
+                    <units>s</units>
+                    <description>Duracao total da execucao (backup local + copia para nuvem), em segundos</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>backup-agent</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>370b9acc638343a68de04988379669fe</uuid>
+                            <expression>nodata(/Backup Agent/restic.backup.status,26h)=1</expression>
+                            <name>Backup Agent - No Data Received (26h) on {HOST.NAME}</name>
+                            <priority>AVERAGE</priority>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>00ea8ea0208b4cb18ae22a4fd3e755cb</uuid>
+                    <name>Repository Size</name>
+                    <type>TRAP</type>
+                    <key>restic.repo.size</key>
+                    <value_type>UNSIGNED</value_type>
+                    <units>B</units>
+                    <description>Tamanho total do repositorio restic (nuvem, ou local se ENABLE_CLOUD_SYNC=false)</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>backup-agent</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>6562ac07a3264fbcb07087c75f635741</uuid>
+                    <name>Total Snapshots</name>
+                    <type>TRAP</type>
+                    <key>restic.repo.snapshots</key>
+                    <value_type>UNSIGNED</value_type>
+                    <units>uni</units>
+                    <description>Quantidade total de snapshots no repositorio monitorado</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>backup-agent</value>
+                        </tag>
+                    </tags>
+                </item>
+            </items>
+        </template>
+    </templates>
+</zabbix_export>

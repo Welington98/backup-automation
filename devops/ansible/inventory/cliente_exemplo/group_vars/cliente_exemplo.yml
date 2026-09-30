@@ -1,0 +1,61 @@
+---
+# Configuracoes do backup-agent para o cliente: Cliente Exemplo Ltda
+# Localizacao: devops/ansible/inventory/cliente_exemplo/group_vars/cliente_exemplo.yml
+#
+# Segredos (RESTIC_PASSWORD, chaves AWS, senhas SSH) vem do Vaultwarden da
+# empresa via lookup do Ansible, nao ficam em texto puro nem criptografados
+# neste repositorio. Requisitos na maquina que roda o ansible-playbook:
+#
+#   ansible-galaxy collection install -r ../../../requirements.yml
+#   bw config server https://vault.suaempresa.com
+#   bw login
+#   export BW_SESSION=$(bw unlock --raw)   # repetir a cada sessao de deploy
+#
+# O item "backup-agent - cliente-exemplo" precisa existir no Vaultwarden
+# (Secure Note) com os campos customizados usados abaixo: restic_password,
+# aws_access_key, aws_secret_key, srv_01_ssh_password. Ver README.md deste
+# cliente para o passo a passo de criacao do item.
+#
+# Este dict e consumido pela role backup_agent (devops/ansible/roles/backup_agent)
+# e sobrescreve por completo o backup_agent_env padrao definido em
+# roles/backup_agent/defaults/main.yml - ou seja, redefina aqui TODOS os
+# campos relevantes para este cliente, nao apenas os que diferem do padrao.
+
+client_name: "cliente-exemplo"
+client_display_name: "Cliente Exemplo Ltda"
+
+# Nome do item no Vaultwarden que guarda os segredos deste cliente
+_bw_item: "backup-agent - cliente-exemplo"
+
+vault_restic_password: "{{ lookup('community.general.bitwarden', _bw_item, field='restic_password') | first }}"
+vault_aws_access_key: "{{ lookup('community.general.bitwarden', _bw_item, field='aws_access_key') | first }}"
+vault_aws_secret_key: "{{ lookup('community.general.bitwarden', _bw_item, field='aws_secret_key') | first }}"
+vault_srv_01_ssh_password: "{{ lookup('community.general.bitwarden', _bw_item, field='srv_01_ssh_password') | first }}"
+
+backup_agent_env:
+  RESTIC_PASSWORD: "{{ vault_restic_password }}"
+  BACKUP_TARGET_PATHS: "/var/univention-backup,/home,/etc"
+  BACKUP_TAG: "cliente-exemplo-daily"
+  EXCLUDE_FILE: "/etc/backup-agent/excludes.txt"
+
+  REPO_LOCAL: "/mnt/backup-local/restic-repo"
+  KEEP_LOCAL_DAILY: 7
+
+  ENABLE_CLOUD_SYNC: "true"
+  REPO_CLOUD: "s3:s3.amazonaws.com/seu-bucket-backups/cliente-exemplo/{{ inventory_hostname }}"
+  AWS_ACCESS_KEY_ID: "{{ vault_aws_access_key }}"
+  AWS_SECRET_ACCESS_KEY: "{{ vault_aws_secret_key }}"
+
+  KEEP_CLOUD_DAILY: 7
+  KEEP_CLOUD_WEEKLY: 4
+  KEEP_CLOUD_MONTHLY: 12
+
+  ENABLE_ZABBIX: "true"
+  ZABBIX_SERVER: "zabbix.suaempresa.com"
+  ZABBIX_PORT: 10051
+  ZABBIX_HOSTNAME: "{{ inventory_hostname }}"
+
+  # Fase 1 (sem HashiCorp Vault): TLS via PSK estatica
+  ENABLE_ZABBIX_TLS: "true"
+  ZABBIX_TLS_PSK_IDENTITY: "backup-agent:{{ inventory_hostname }}"
+  ZABBIX_TLS_PSK_FILE: "/etc/backup-agent/certs/zabbix.psk"
