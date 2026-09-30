@@ -125,6 +125,12 @@ Ou rode o agente completo e acompanhe o log (ver
 | `restic.repo.size.cloud` | Apenas se `ENABLE_CLOUD_SYNC="true"` e `restic stats` tiver sucesso | bytes | Tamanho total do repositorio **em nuvem** (`REPO_CLOUD`) |
 | `restic.repo.snapshots.cloud` | Apenas se `ENABLE_CLOUD_SYNC="true"` e `restic snapshots` tiver sucesso | contagem | Quantidade de snapshots no repositorio **em nuvem** |
 
+Os tres itens `*.status` (`restic.backup.status`,
+`restic.retention.local.status`, `restic.retention.cloud.status`) usam o
+Value Map **"Backup Agent Status"**, ja incluso no template — em vez de `0`
+e `1`, **Monitoring > Latest data** e os graficos mostram "Falha"/"OK"
+diretamente, sem precisar decorar o significado do numero.
+
 Triggers ja inclusos no template: falha em qualquer `*.status` (HIGH) e
 ausencia de dados por 26h em `restic.backup.status` (AVERAGE) — ver
 `devops/zabbix/template_backup_agent.xml` para os detalhes.

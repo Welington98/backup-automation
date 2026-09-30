@@ -6,6 +6,15 @@ versionamento seguindo [SemVer](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- `devops/zabbix/template_backup_agent.xml`: Value Map **"Backup Agent
+  Status"** (`0` -> "Falha", `1` -> "OK") aplicado aos tres itens de status
+  (`restic.backup.status`, `restic.retention.local.status`,
+  `restic.retention.cloud.status`) — Latest data e graficos no Zabbix
+  passam a mostrar texto em vez de `0`/`1` cru. Estrutura do XML (tag
+  `<valuemaps>` a nivel de template, `<valuemap><name>` a nivel de item)
+  confirmada criando o value map de verdade via API e exportando, contra
+  um Zabbix Server 6.0 real, antes de escrever no arquivo a mao — import,
+  vinculo aos 3 itens e reimport validados.
 - `README.md`: secao "Atualizar o agente nos servidores" — como reaplicar
   mudancas deste repositorio nos servidores ja instalados, tanto para
   instalacao manual (`install.sh` + `git pull` + `install`) quanto via
