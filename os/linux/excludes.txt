@@ -1,0 +1,23 @@
+# ==============================================================================
+# BACKUP AGENT - EXCLUSOES GLOBAIS (restic --exclude-file)
+# ==============================================================================
+
+# Arquivos temporarios e de sistema
+*.tmp
+*.swp
+*.log
+**/lost+found
+
+# Pseudo-filesystems (nao devem ser incluidos mesmo se o path pai for)
+/proc/*
+/sys/*
+/dev/*
+/run/*
+/tmp/*
+/var/tmp/*
+
+# Caches e dependencias que nao precisam ser versionadas
+**/.cache
+**/node_modules
+**/__pycache__
+**/.venv
