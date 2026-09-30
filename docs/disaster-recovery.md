@@ -11,9 +11,13 @@
 3. Restaure diretamente a partir da nuvem (nao e necessario esperar o
    repositorio local ser reconstruido):
    ```bash
-   restic -r "$REPO_CLOUD" snapshots
-   restic -r "$REPO_CLOUD" restore <snapshot-id> --target /caminho/restauracao
+   backup-agent.sh list                                            # ou: restic -r "$REPO_CLOUD" snapshots
+   backup-agent.sh restore --cloud --target /caminho/restauracao    # ou: restic -r "$REPO_CLOUD" restore <snapshot-id> --target ...
    ```
+   `backup-agent.sh restore`/`files` cobrem o caso comum (ler
+   `backup.env`, montar o `-r` certo); para algo mais especifico do
+   Restic (`--verify`, `--exclude`, restaurar so um UID/permissao
+   especifica etc.) use o `restic` direto como no comentario acima.
 4. O proximo ciclo do `backup-agent.sh` volta a popular o repositorio local
    normalmente.
 

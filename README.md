@@ -39,6 +39,13 @@ sudo /usr/local/bin/backup-agent.sh
 # listar os snapshots existentes (local e nuvem, sem mexer no backup.env na mao)
 sudo /usr/local/bin/backup-agent.sh list
 
+# listar os arquivos dentro de um snapshot
+sudo /usr/local/bin/backup-agent.sh files
+
+# restaurar um snapshot (ou so um caminho) para um diretorio
+sudo /usr/local/bin/backup-agent.sh restore --target /tmp/restauracao
+sudo /usr/local/bin/backup-agent.sh restore --target /tmp/restauracao --include /etc/backup-agent
+
 # ver todos os comandos disponiveis
 backup-agent.sh --help
 ```

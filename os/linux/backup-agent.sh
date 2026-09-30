@@ -13,10 +13,28 @@ print_help() {
 backup-agent $BACKUP_AGENT_VERSION - backup dual-stage (Restic local -> nuvem) com telemetria Zabbix
 
 Uso:
-  backup-agent.sh              Executa o pipeline completo de backup
-  backup-agent.sh list         Lista os snapshots existentes (local e nuvem)
-  backup-agent.sh --version    Mostra a versao instalada e sai
-  backup-agent.sh --help       Mostra esta ajuda e sai
+  backup-agent.sh                    Executa o pipeline completo de backup
+  backup-agent.sh list               Lista os snapshots existentes (local e nuvem)
+  backup-agent.sh files [opcoes]     Lista os arquivos dentro de um snapshot
+  backup-agent.sh restore [opcoes]   Restaura um snapshot (ou parte dele) para um diretorio
+  backup-agent.sh --version          Mostra a versao instalada e sai
+  backup-agent.sh --help             Mostra esta ajuda e sai
+
+Opcoes de 'files':
+  --cloud              Usa o repositorio em nuvem em vez do local (requer ENABLE_CLOUD_SYNC=true)
+  --snapshot <id>      Snapshot a inspecionar (padrao: latest)
+
+Opcoes de 'restore' (--target e obrigatorio):
+  --target <dir>       Diretorio de destino da restauracao (obrigatorio)
+  --cloud              Usa o repositorio em nuvem em vez do local (requer ENABLE_CLOUD_SYNC=true)
+  --snapshot <id>      Snapshot a restaurar (padrao: latest)
+  --include <padrao>   Restaura so os caminhos que casam com o padrao, em vez do snapshot inteiro
+
+Exemplos:
+  backup-agent.sh files
+  backup-agent.sh files --cloud --snapshot a1b2c3d4
+  backup-agent.sh restore --target /tmp/restauracao
+  backup-agent.sh restore --target /tmp/restauracao --include /etc/backup-agent
 
 Pipeline completo (sem argumentos):
   1. Backup local                (restic backup)
@@ -53,25 +71,101 @@ else
     exit 1
 fi
 
-# Lista os snapshots existentes (local e, se habilitada, nuvem). So leitura
-# - nao usa o lock nem escreve no log, pra poder rodar a qualquer momento
-# mesmo com um backup em andamento.
-if [ "$1" = "list" ]; then
-    echo "=== Snapshots - Repositorio Local ($REPO_LOCAL) ==="
-    restic -r "$REPO_LOCAL" snapshots
+# Comandos de exploracao/restauracao (list, files, restore) sao so leitura
+# no repositorio Restic (restore so escreve no --target escolhido, nunca no
+# repositorio) - por isso nao usam o lock nem escrevem no log, e podem
+# rodar a qualquer momento mesmo com um backup em andamento.
+case "${1:-}" in
+    list)
+        echo "=== Snapshots - Repositorio Local ($REPO_LOCAL) ==="
+        restic -r "$REPO_LOCAL" snapshots
 
-    if [ "$ENABLE_CLOUD_SYNC" = "true" ]; then
-        echo ""
-        echo "=== Snapshots - Repositorio Nuvem ($REPO_CLOUD) ==="
-        restic -r "$REPO_CLOUD" snapshots
-    fi
-    exit 0
-elif [ -n "${1:-}" ]; then
-    echo "[ERROR] Comando desconhecido: $1" >&2
-    echo "" >&2
-    print_help >&2
-    exit 1
-fi
+        if [ "$ENABLE_CLOUD_SYNC" = "true" ]; then
+            echo ""
+            echo "=== Snapshots - Repositorio Nuvem ($REPO_CLOUD) ==="
+            restic -r "$REPO_CLOUD" snapshots
+        fi
+        exit 0
+        ;;
+
+    files)
+        shift
+        TARGET_REPO="$REPO_LOCAL"
+        SNAPSHOT="latest"
+
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --cloud)
+                    if [ "$ENABLE_CLOUD_SYNC" != "true" ]; then
+                        echo "[ERROR] --cloud requer ENABLE_CLOUD_SYNC=\"true\" em $ENV_FILE." >&2
+                        exit 1
+                    fi
+                    TARGET_REPO="$REPO_CLOUD"
+                    shift
+                    ;;
+                --snapshot) SNAPSHOT="${2:?--snapshot precisa de um ID}"; shift 2 ;;
+                *)
+                    echo "[ERROR] Opcao desconhecida para 'files': $1" >&2
+                    echo "Uso: backup-agent.sh files [--cloud] [--snapshot <id>]" >&2
+                    exit 1
+                    ;;
+            esac
+        done
+
+        restic -r "$TARGET_REPO" ls "$SNAPSHOT"
+        exit $?
+        ;;
+
+    restore)
+        shift
+        TARGET_REPO="$REPO_LOCAL"
+        SNAPSHOT="latest"
+        RESTORE_TARGET=""
+        INCLUDE=""
+
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --target) RESTORE_TARGET="${2:?--target precisa de um diretorio de destino}"; shift 2 ;;
+                --cloud)
+                    if [ "$ENABLE_CLOUD_SYNC" != "true" ]; then
+                        echo "[ERROR] --cloud requer ENABLE_CLOUD_SYNC=\"true\" em $ENV_FILE." >&2
+                        exit 1
+                    fi
+                    TARGET_REPO="$REPO_CLOUD"
+                    shift
+                    ;;
+                --snapshot) SNAPSHOT="${2:?--snapshot precisa de um ID}"; shift 2 ;;
+                --include) INCLUDE="${2:?--include precisa de um padrao}"; shift 2 ;;
+                *)
+                    echo "[ERROR] Opcao desconhecida para 'restore': $1" >&2
+                    echo "Uso: backup-agent.sh restore --target <diretorio> [--cloud] [--snapshot <id>] [--include <padrao>]" >&2
+                    exit 1
+                    ;;
+            esac
+        done
+
+        if [ -z "$RESTORE_TARGET" ]; then
+            echo "[ERROR] restore precisa de --target <diretorio>" >&2
+            echo "Uso: backup-agent.sh restore --target <diretorio> [--cloud] [--snapshot <id>] [--include <padrao>]" >&2
+            exit 1
+        fi
+
+        RESTORE_ARGS=(-r "$TARGET_REPO" restore "$SNAPSHOT" --target "$RESTORE_TARGET")
+        [ -n "$INCLUDE" ] && RESTORE_ARGS+=(--include "$INCLUDE")
+
+        restic "${RESTORE_ARGS[@]}"
+        exit $?
+        ;;
+
+    "") ;; # sem comando -> roda o pipeline completo abaixo
+
+    *)
+        echo "[ERROR] Comando desconhecido: $1" >&2
+        echo "" >&2
+        print_help >&2
+        exit 1
+        ;;
+esac
 
 LOG_FILE="${LOG_PATH:-/var/log/backup-agent.log}"
 START_TIME=$(date +%s)
