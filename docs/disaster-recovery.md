@@ -53,6 +53,38 @@ trate como o Cenario 1 (descartar o repositorio local e recria-lo a partir
 da proxima execucao) e restaure dados criticos a partir da nuvem enquanto
 isso.
 
+## Cenario 5: Repositorio bloqueado (lock do Restic)
+
+O Restic usa um lock exclusivo no repositorio durante `backup`, `forget
+--prune` e outras operacoes de escrita, para evitar que duas execucoes
+corrompam o mesmo repositorio. Se voce ver algo como:
+
+```
+repo already locked, waiting up to 0s for the lock
+unable to create lock in backend: repository is already locked exclusively
+by PID 384558 on <host> by root (UID 0, GID 0)
+lock was created at ... (Ns ago)
+the `unlock` command can be used to remove stale locks
+```
+
+Ha duas causas possiveis:
+
+1. **Execucao concorrente real** (outro processo do `backup-agent.sh` ou um
+   comando `restic` manual esta rodando *agora* no mesmo repositorio). O
+   `backup-agent.sh` ja tem seu proprio lock (`flock` em
+   `/var/lock/backup-agent.lock`) que impede duas instancias *do script*
+   rodarem ao mesmo tempo — mas isso nao impede um `restic` chamado
+   manualmente por voce de colidir com uma execucao do script em
+   andamento. Nesse caso, **espere a outra execucao terminar** (confira
+   com `ps aux | grep restic`) — nao force um `unlock` com um processo
+   ainda ativo, ou vai corromper o repositorio.
+2. **Lock travado (stale)**: o processo que segurava o lock morreu (kill
+   -9, falta de energia, OOM killer) sem liberar. Confirme que o PID do
+   erro nao existe mais (`ps -p <PID>`) e, so entao, libere manualmente:
+   ```bash
+   restic -r "$REPO" unlock
+   ```
+
 ## Teste periodico de restauracao
 
 Recomenda-se validar trimestralmente que um snapshot recente pode ser

@@ -94,6 +94,50 @@
                         </tag>
                     </tags>
                 </item>
+                <item>
+                    <uuid>98089ceaa5744687bf87fc134d42a8de</uuid>
+                    <name>Local Retention Status</name>
+                    <type>TRAP</type>
+                    <key>restic.retention.local.status</key>
+                    <value_type>UNSIGNED</value_type>
+                    <description>1 = forget/prune do repositorio local concluido com sucesso, 0 = falha (ex.: repositorio bloqueado por outra execucao concorrente)</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>backup-agent</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>adfac9a1f2fa46efa63e11e1d958dae6</uuid>
+                            <expression>last(/Backup Agent/restic.retention.local.status)=0</expression>
+                            <name>Backup Agent - Local Retention Failed on {HOST.NAME}</name>
+                            <priority>HIGH</priority>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>4a8a69cddf8e45cea0b83704198fff52</uuid>
+                    <name>Cloud Retention Status</name>
+                    <type>TRAP</type>
+                    <key>restic.retention.cloud.status</key>
+                    <value_type>UNSIGNED</value_type>
+                    <description>1 = forget/prune do repositorio em nuvem concluido com sucesso, 0 = falha. So enviado quando ENABLE_CLOUD_SYNC=true</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>backup-agent</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>940e3aca2ca84759aa74dea18e2b5c2e</uuid>
+                            <expression>last(/Backup Agent/restic.retention.cloud.status)=0</expression>
+                            <name>Backup Agent - Cloud Retention Failed on {HOST.NAME}</name>
+                            <priority>HIGH</priority>
+                        </trigger>
+                    </triggers>
+                </item>
             </items>
         </template>
     </templates>

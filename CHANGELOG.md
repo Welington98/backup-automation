@@ -3,6 +3,33 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 versionamento seguindo [SemVer](https://semver.org/lang/pt-BR/).
 
+## [Unreleased]
+
+### Fixed
+- `os/linux/backup-agent.sh`: adicionado lock proprio (`flock` em
+  `/var/lock/backup-agent.lock`) para impedir duas execucoes simultaneas
+  do script no mesmo host — antes, rodar o script em paralelo (ex.: teste
+  manual em cima do cron) podia colidir com o lock exclusivo do proprio
+  Restic no meio de um `forget --prune`.
+- `os/linux/backup-agent.sh`: falha no `forget/prune` (Estagio 3, local ou
+  nuvem) agora e detectada, logada como `[ERROR]` e reportada ao Zabbix —
+  antes, uma falha nessa etapa passava despercebida e o log terminava com
+  `=== EXECUCAO FINALIZADA ===` como se tudo tivesse dado certo.
+- `devops/zabbix/template_backup_agent.xml`: novos itens Trapper
+  `restic.retention.local.status` e `restic.retention.cloud.status` (com
+  triggers HIGH), para os dois fixes acima aparecerem no Zabbix. Reimportar
+  o template nos hosts ja cadastrados.
+
+### Changed
+- `docs/deployment.md` secao 2 (instalacao manual) detalhada em
+  subsecoes (2.1-2.5): preparo do disco do `REPO_LOCAL` (aviso sobre
+  mount NFS/iSCSI caindo silenciosamente), tabela dos campos minimos do
+  `backup.env`, aviso de que `RESTIC_PASSWORD` e obrigatorio e
+  irrecuperavel se perdido, e nota sobre dimensionamento de espaco.
+- `docs/disaster-recovery.md`: novo "Cenario 5" sobre locks do Restic,
+  diferenciando execucao concorrente (agora prevenida pelo `flock`) de
+  lock travado (`stale`) apos um processo morrer sem liberar.
+
 ## [0.1.0] - 2026-09-30
 
 ### Added

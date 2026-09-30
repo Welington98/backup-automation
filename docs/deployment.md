@@ -22,6 +22,8 @@
 
 ## 2. Instalacao manual (um host)
 
+### 2.1 Instalar o agente
+
 ```bash
 git clone <repo> backup-agent && cd backup-agent
 sudo os/linux/install.sh
@@ -34,27 +36,104 @@ O `install.sh`:
 4. Cria `/etc/backup-agent/backup.env` a partir do template (se nao existir).
 5. Agenda a execucao diaria em `/etc/cron.d/backup-agent` (03:30).
 
-Depois de instalar:
+### 2.2 Preparar o disco do repositorio local (`REPO_LOCAL`)
+
+O Estagio 1 (local) precisa de um destino em disco **antes** de inicializar
+o repositorio. Use um disco secundario ou ponto de montagem dedicado — nunca
+a particao raiz (`/`), para nao competir por espaco com o SO nem lotar `/`
+se o backup crescer mais que o esperado.
 
 ```bash
-# 1. Edite as credenciais e paths
+sudo mkdir -p /mnt/backup-local/restic-repo
+sudo chmod 700 /mnt/backup-local
+```
+
+> **Se for NFS/iSCSI:** deixe o mount no `/etc/fstab` para montar
+> automaticamente no boot, e confirme que ele esta montado *antes* do cron
+> rodar. Se o mount cair, o Restic nao da erro "disco nao encontrado" — ele
+> silenciosamente cria um repositorio novo dentro da pasta vazia que sobrou
+> na raiz, e voce so percebe quando for restaurar algo e o historico nao
+> bater. Vale um `mountpoint -q /mnt/backup-local || echo "NAO MONTADO"` no
+> inicio do `backup-agent.sh` se isso ja aconteceu uma vez no ambiente.
+
+### 2.3 Configurar `backup.env` e inicializar os repositorios
+
+```bash
 sudo vi /etc/backup-agent/backup.env
+```
 
-# 2. Inicialize os repositorios restic (uma vez)
-restic -r /mnt/backup-local/restic-repo init
-restic -r s3:s3.amazonaws.com/seu-bucket/CLIENTE/HOSTNAME init
+Campos minimos para o Estagio 1 (local) funcionar:
 
-# 3. Gere a PSK do canal Zabbix
+| Campo | O que colocar |
+|---|---|
+| `RESTIC_PASSWORD` | Senha mestre do Restic (ver aviso abaixo) — **obrigatoria** |
+| `BACKUP_TARGET_PATHS` | Diretorios reais a salvar, separados por virgula |
+| `REPO_LOCAL` | Caminho criado no passo 2.2 (ex. `/mnt/backup-local/restic-repo`) |
+| `KEEP_LOCAL_DAILY` | Quantos dias manter localmente (padrao: 7) |
+
+> **`RESTIC_PASSWORD` nao e opcional.** O Restic sempre criptografa o
+> repositorio (client-side, AES-256) — nao existe modo sem senha, e ela e
+> exigida em todo comando (`init`, `backup`, `restore`, `forget`). **Nao ha
+> "esqueci a senha"**: perdendo essa senha, os dados ficam permanentemente
+> irrecuperaveis. Guarde uma copia em lugar seguro **fora** do servidor
+> (gestor de senhas da equipe / Vaultwarden — ver secao 3), nunca apenas no
+> `backup.env` da propria maquina que ela protege.
+
+Com o arquivo configurado, inicialize o(s) repositorio(s) — **uma vez
+apenas**, a segunda execucao falha porque o repo ja existe:
+
+```bash
+set -a; source /etc/backup-agent/backup.env; set +a
+
+restic -r "$REPO_LOCAL" init
+
+# Se ENABLE_CLOUD_SYNC="true", inicialize tambem o repositorio na nuvem:
+restic -r "$REPO_CLOUD" init
+```
+
+Verifique que o repositorio local foi criado corretamente:
+
+```bash
+restic -r "$REPO_LOCAL" snapshots    # lista vazia por enquanto (ainda ok)
+restic -r "$REPO_LOCAL" cat config   # confirma que o repo existe
+```
+
+> **Espaco em disco:** o Restic desduplica blocos, entao nao cresce como
+> "N copias completas" — mas ainda acumula ate o `forget --prune` (Estagio
+> 3 do `backup-agent.sh`) liberar snapshots fora da janela de
+> `KEEP_LOCAL_DAILY`. Garanta folga alem do tamanho total de
+> `BACKUP_TARGET_PATHS`.
+
+### 2.4 Configurar o canal Zabbix (TLS via PSK)
+
+```bash
 sudo /usr/local/bin/backup-agent-generate-psk.sh
 # -> copie a "PSK identity" e o "PSK value" impressos
+```
 
-# 4. Cadastre a PSK no Zabbix Server
-# Data collection > Hosts > <host> > Encryption > PSK
+Cadastre esses valores no Zabbix Server: **Data collection > Hosts >
+`<host>` > Encryption > PSK**.
 
-# 5. Teste manualmente
+### 2.5 Testar
+
+Se ainda nao configurou a nuvem, desative `ENABLE_CLOUD_SYNC="false"`
+temporariamente para validar so o Estagio 1 primeiro.
+
+```bash
 sudo /usr/local/bin/backup-agent.sh
 tail -f /var/log/backup-agent.log
+restic -r "$REPO_LOCAL" snapshots    # agora deve aparecer 1 snapshot
 ```
+
+> **Nao rode o script duas vezes em paralelo.** O `backup-agent.sh` usa um
+> lock proprio (`flock` em `/var/lock/backup-agent.lock`) para impedir duas
+> execucoes simultaneas no mesmo host — se voce rodar manualmente enquanto
+> outra execucao (manual ou do cron) ainda esta em andamento, a segunda
+> aborta na hora com `[ERROR] Outra execucao do backup-agent.sh ja esta em
+> andamento` no log, sem tentar mexer no repositorio Restic. Isso evita o
+> erro `repository is already locked exclusively by PID ...` do proprio
+> Restic (ver [`docs/disaster-recovery.md`](disaster-recovery.md) para mais
+> detalhes sobre locks do Restic).
 
 ## 3. Deploy em massa (Ansible) - inventario multi-cliente
 
@@ -168,6 +247,12 @@ pois a PSK e estatica.
 
 - [ ] `restic snapshots -r $REPO_LOCAL` mostra o snapshot mais recente.
 - [ ] `restic snapshots -r $REPO_CLOUD` mostra o snapshot replicado.
+- [ ] Template Zabbix reimportado apos qualquer atualizacao do
+      `template_backup_agent.xml` (itens novos nao aparecem sozinhos nos
+      hosts ja cadastrados).
 - [ ] Item `restic.backup.status` no Zabbix recebeu valor `1`.
+- [ ] Item `restic.retention.local.status` no Zabbix recebeu valor `1`.
+- [ ] Item `restic.retention.cloud.status` no Zabbix recebeu valor `1`
+      (apenas se `ENABLE_CLOUD_SYNC=true`).
 - [ ] Trigger "No Data Received (26h)" nao esta disparada.
 - [ ] `/var/log/backup-agent.log` sem erros na ultima execucao.
