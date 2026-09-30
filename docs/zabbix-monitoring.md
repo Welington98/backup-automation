@@ -41,8 +41,12 @@ Guia completo para o backup-agent enviar metricas para o Zabbix Server via
 - **Host name:** precisa ser **identico** ao `ZABBIX_HOSTNAME` configurado
   no `backup.env` do cliente (sensivel a maiusculas/minusculas).
 - **Templates:** vincule o template **Backup Agent** importado no passo 3.1.
-- **Host groups:** qualquer grupo (ex.: crie um "Backup Agent" se nao tiver
-  um preferido).
+- **Host groups:** grupo com o nome **identico** ao `client_name` deste
+  cliente (definido em
+  `devops/ansible/inventory/<cliente>/group_vars/<cliente>.yml`, ex.:
+  `cliente-exemplo`). Essa convencao e obrigatoria para o dashboard Grafana
+  consolidado usar o host group como filtro de "Cliente" — ver
+  [`docs/grafana-dashboards.md`](grafana-dashboards.md).
 - **Interfaces:** nao e necessario adicionar nenhuma — todos os itens do
   template sao Trapper.
 
@@ -124,16 +128,55 @@ Ou rode o agente completo e acompanhe o log (ver
 | `restic.repo.snapshots.local` | Sempre, se `restic snapshots` tiver sucesso (Etapa 4) | contagem | Quantidade de snapshots no repositorio **local** |
 | `restic.repo.size.cloud` | Apenas se `ENABLE_CLOUD_SYNC="true"` e `restic stats` tiver sucesso | bytes | Tamanho total do repositorio **em nuvem** (`REPO_CLOUD`) |
 | `restic.repo.snapshots.cloud` | Apenas se `ENABLE_CLOUD_SYNC="true"` e `restic snapshots` tiver sucesso | contagem | Quantidade de snapshots no repositorio **em nuvem** |
+| `restic.check.local.status` | Apenas em `backup-agent.sh check` (Secao 6.1) | `0`/`1` | Resultado do `restic check` no repositorio **local** |
+| `restic.check.cloud.status` | Apenas em `backup-agent.sh check`, se `ENABLE_CLOUD_SYNC="true"` | `0`/`1` | Resultado do `restic check` no repositorio **em nuvem** |
+| `restic.check.duration` | Apenas em `backup-agent.sh check` | segundos | Duracao total da verificacao (local + nuvem) |
 
-Os tres itens `*.status` (`restic.backup.status`,
-`restic.retention.local.status`, `restic.retention.cloud.status`) usam o
-Value Map **"Backup Agent Status"**, ja incluso no template — em vez de `0`
-e `1`, **Monitoring > Latest data** e os graficos mostram "Falha"/"OK"
+Os cinco itens `*.status` (`restic.backup.status`,
+`restic.retention.local.status`, `restic.retention.cloud.status`,
+`restic.check.local.status`, `restic.check.cloud.status`) usam o Value Map
+**"Backup Agent Status"**, ja incluso no template — em vez de `0` e `1`,
+**Monitoring > Latest data** e os graficos mostram "Falha"/"OK"
 diretamente, sem precisar decorar o significado do numero.
 
-Triggers ja inclusos no template: falha em qualquer `*.status` (HIGH) e
-ausencia de dados por 26h em `restic.backup.status` (AVERAGE) — ver
+Triggers ja inclusos no template: falha em qualquer `*.status` (HIGH),
+ausencia de dados por 26h em `restic.backup.status` (AVERAGE) e ausencia de
+dados por 8 dias em `restic.check.local.status` (AVERAGE, ja que o `check`
+roda semanalmente e nao diariamente) — ver
 `devops/zabbix/template_backup_agent.xml` para os detalhes.
+
+### 6.1 Verificacao de integridade (`backup-agent.sh check`)
+
+`restic check` valida a integridade do(s) repositorio(s) — estrutura
+interna, referencias entre snapshots/arvores/pack files e, com
+`--read-data`, o conteudo (checksum) de cada pack file. E uma operacao
+separada do pipeline diario (nao roda dentro de `backup-agent.sh` sem
+argumentos) porque e mais lenta e, com `--read-data`, le o repositorio
+inteiro — custoso em egress quando o repositorio e um bucket S3/B2.
+
+```bash
+# Verificacao rapida (so estrutura/metadados) - local e nuvem (se habilitada)
+sudo /usr/local/bin/backup-agent.sh check
+
+# Verificacao completa (le o conteudo de todos os pack files)
+sudo /usr/local/bin/backup-agent.sh check --read-data
+```
+
+O `install.sh` (e a role Ansible) ja agendam a variante rapida semanalmente
+em `/etc/cron.d/backup-agent`, domingo as 04:30 — fora do horario do
+pipeline diario (03:30) para as duas execucoes nao disputarem o lock
+(`flock`) do `backup-agent.sh` uma com a outra. Para rodar `--read-data`
+periodicamente (ex.: mensal), adicione uma entrada de cron propria — ela
+tambem respeita o mesmo lock, entao nunca roda ao mesmo tempo que o pipeline
+ou a verificacao rapida.
+
+Resultado vai para o log (`/var/log/backup-agent.log`) e para os itens
+`restic.check.local.status` / `restic.check.cloud.status` /
+`restic.check.duration` no Zabbix (tabela acima). Em caso de falha, o log
+tem a saida completa do `restic check` — normalmente aponta pack files
+ausentes/corrompidos, que exigem `restic rebuild-index` ou, em ultimo caso,
+restaurar a partir do outro repositorio (local ↔ nuvem) — ver
+[`docs/disaster-recovery.md`](disaster-recovery.md).
 
 ## 7. Troubleshooting
 
@@ -155,3 +198,4 @@ rede/firewall/nome de host.
 - `os/linux/generate-psk.sh` — geracao da PSK.
 - `os/linux/backup-agent.sh` (funcao `send_zabbix`) — como cada item e enviado.
 - [`docs/architecture.md`](architecture.md) — seguranca do canal (PSK vs. Vault PKI futuro).
+- [`docs/grafana-dashboards.md`](grafana-dashboards.md) — dashboard Grafana consolidado sobre esses dados.

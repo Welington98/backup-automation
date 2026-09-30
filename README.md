@@ -24,6 +24,7 @@ backup-agent/
 ├── os/macos/            # reservado (fase futura)
 ├── devops/ansible/      # role de deploy automatizado
 ├── devops/zabbix/       # template Zabbix Trapper
+├── devops/grafana/      # dashboard consolidado + provisioning (le do Zabbix)
 └── docs/                # arquitetura, deployment, monitoramento Zabbix, disaster recovery
 ```
 
@@ -46,12 +47,16 @@ sudo /usr/local/bin/backup-agent.sh files
 sudo /usr/local/bin/backup-agent.sh restore --target /tmp/restauracao
 sudo /usr/local/bin/backup-agent.sh restore --target /tmp/restauracao --include /etc/backup-agent
 
+# verificar a integridade do(s) repositorio(s) (restic check)
+sudo /usr/local/bin/backup-agent.sh check
+
 # ver todos os comandos disponiveis
 backup-agent.sh --help
 ```
 
 Passo a passo completo: [`docs/deployment.md`](docs/deployment.md).
 Configurar metricas no Zabbix: [`docs/zabbix-monitoring.md`](docs/zabbix-monitoring.md).
+Dashboard Grafana consolidado: [`docs/grafana-dashboards.md`](docs/grafana-dashboards.md).
 Procedimentos de recuperacao: [`docs/disaster-recovery.md`](docs/disaster-recovery.md).
 
 ## Atualizar o agente nos servidores

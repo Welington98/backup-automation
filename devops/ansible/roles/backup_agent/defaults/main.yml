@@ -36,3 +36,9 @@ backup_agent_env:
 
 backup_agent_cron_hour: 3
 backup_agent_cron_minute: 30
+
+# Verificacao de integridade (restic check, so metadados) semanal - fora do
+# horario do pipeline diario para nao disputar o lock (flock) com ele.
+backup_agent_check_cron_weekday: 0 # domingo
+backup_agent_check_cron_hour: 4
+backup_agent_check_cron_minute: 30
