@@ -17,6 +17,16 @@ fi
 LOG_FILE="${LOG_PATH:-/var/log/backup-agent.log}"
 START_TIME=$(date +%s)
 
+# Impede duas execucoes simultaneas (ex.: teste manual em cima do cron, ou
+# duas chamadas manuais em paralelo) - evita que o Restic rejeite a segunda
+# instancia no meio de um forget/prune com "repository is already locked".
+LOCK_FILE="${LOCK_PATH:-/var/lock/backup-agent.lock}"
+exec 200>"$LOCK_FILE"
+if ! flock -n 200; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] Outra execucao do backup-agent.sh ja esta em andamento (lock $LOCK_FILE). Abortando." >> "$LOG_FILE"
+    exit 1
+fi
+
 # Funcao para telemetria Zabbix Trapper
 send_zabbix() {
     local key="$1"
@@ -97,6 +107,13 @@ restic -r "$REPO_LOCAL" forget \
     --keep-daily "${KEEP_LOCAL_DAILY:-7}" \
     --prune >> "$LOG_FILE" 2>&1
 
+if [ $? -ne 0 ]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] Falha na retencao local (forget/prune)." >> "$LOG_FILE"
+    send_zabbix "restic.retention.local.status" 0
+else
+    send_zabbix "restic.retention.local.status" 1
+fi
+
 # Retencao Nuvem (Longo Prazo)
 if [ "$ENABLE_CLOUD_SYNC" = "true" ]; then
     restic -r "$REPO_CLOUD" forget \
@@ -104,6 +121,13 @@ if [ "$ENABLE_CLOUD_SYNC" = "true" ]; then
         --keep-weekly "${KEEP_CLOUD_WEEKLY:-4}" \
         --keep-monthly "${KEEP_CLOUD_MONTHLY:-12}" \
         --prune >> "$LOG_FILE" 2>&1
+
+    if [ $? -ne 0 ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] Falha na retencao em nuvem (forget/prune)." >> "$LOG_FILE"
+        send_zabbix "restic.retention.cloud.status" 0
+    else
+        send_zabbix "restic.retention.cloud.status" 1
+    fi
 fi
 
 # ------------------------------------------------------------------------------
