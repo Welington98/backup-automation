@@ -41,6 +41,43 @@ Passo a passo completo: [`docs/deployment.md`](docs/deployment.md).
 Configurar metricas no Zabbix: [`docs/zabbix-monitoring.md`](docs/zabbix-monitoring.md).
 Procedimentos de recuperacao: [`docs/disaster-recovery.md`](docs/disaster-recovery.md).
 
+## Atualizar o agente nos servidores
+
+Alterar os arquivos neste repositorio (ex.: `os/linux/backup-agent.sh`)
+**nao atualiza sozinho** o que ja esta instalado nos servidores — o jeito
+de aplicar a atualizacao depende de como cada servidor foi instalado.
+
+### Instalacao manual (`install.sh`)
+
+No servidor, atualize o repositorio local e reaplique so os scripts (nao
+mexe em `backup.env` nem `excludes.txt` que ja estao configurados):
+
+```bash
+cd backup-agent   # pasta onde o repo foi clonado no servidor
+git pull origin main
+
+sudo install -m 750 os/linux/backup-agent.sh /usr/local/bin/backup-agent.sh
+sudo install -m 750 os/linux/generate-psk.sh /usr/local/bin/backup-agent-generate-psk.sh
+```
+
+Se o `template_backup_agent.xml` tambem mudou, reimporte-o manualmente no
+Zabbix Server (ver [`docs/zabbix-monitoring.md`](docs/zabbix-monitoring.md)).
+
+### Deploy via Ansible
+
+E automatico — a role ja reaplica o script toda vez que o playbook roda:
+
+```bash
+cd devops/ansible
+git pull origin main
+export BW_SESSION=$(bw unlock --raw)
+ansible-playbook -i inventory/<cliente>/hosts.yml playbook.yml
+```
+
+Esse e o caminho que escala para varios servidores/clientes sem precisar
+entrar em cada host manualmente — ver
+[`devops/ansible/inventory/README.md`](devops/ansible/inventory/README.md).
+
 ## Roadmap
 
 - [x] Fase 1: backup dual-stage, retencao, telemetria Zabbix (PSK estatica).

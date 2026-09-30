@@ -6,6 +6,10 @@ versionamento seguindo [SemVer](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- `README.md`: secao "Atualizar o agente nos servidores" — como reaplicar
+  mudancas deste repositorio nos servidores ja instalados, tanto para
+  instalacao manual (`install.sh` + `git pull` + `install`) quanto via
+  Ansible (automatico a cada `ansible-playbook`).
 - Metricas de tamanho e contagem de snapshots agora sao reportadas
   **separadamente** para local e nuvem: `restic.repo.size` e
   `restic.repo.snapshots` viraram `restic.repo.size.local`/`.cloud` e
