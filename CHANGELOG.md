@@ -1,3 +1,12 @@
+# [1.2.0](https://github.com/Welington98/backup-automation/compare/v1.1.0...v1.2.0) (2026-09-30)
+
+
+### Features
+
+* add --help to backup-agent.sh and reject unknown commands ([db1716f](https://github.com/Welington98/backup-automation/commit/db1716f9618a136631938a6a178a71a82a1169af))
+* add files and restore subcommands to backup-agent.sh ([22bb52e](https://github.com/Welington98/backup-automation/commit/22bb52e759a712fb31c1c5ac8d8d7ea7215b8f0c))
+* add update.sh to safely pull and reapply changes on servers ([641cc83](https://github.com/Welington98/backup-automation/commit/641cc834bfbf42638d58c74569d8e3d867dbef01))
+
 # [1.1.0](https://github.com/Welington98/backup-automation/compare/v1.0.0...v1.1.0) (2026-09-30)
 
 
