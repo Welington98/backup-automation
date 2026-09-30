@@ -94,7 +94,13 @@ fi
 if [ "$ENABLE_CLOUD_SYNC" = "true" ]; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [STAGE 2] Sincronizando com repositorio em nuvem..." >> "$LOG_FILE"
 
-    restic -r "$REPO_LOCAL" copy --repo2 "$REPO_CLOUD" >> "$LOG_FILE" 2>&1
+    # RESTIC_FROM_PASSWORD e a senha do repositorio de origem (--from-repo).
+    # Como local e nuvem usam a mesma RESTIC_PASSWORD (senha mestre unica,
+    # ver backup.env.template), reaproveitamos o mesmo valor - sem isso o
+    # restic tenta pedir a senha de forma interativa e falha em
+    # background/cron com "unable to read password".
+    RESTIC_FROM_PASSWORD="$RESTIC_PASSWORD" \
+        restic -r "$REPO_CLOUD" copy --from-repo "$REPO_LOCAL" >> "$LOG_FILE" 2>&1
     CLOUD_STATUS=$?
 else
     CLOUD_STATUS=0

@@ -25,6 +25,18 @@ versionamento seguindo [SemVer](https://semver.org/lang/pt-BR/).
   `backup-agent.sh` e troubleshooting comum.
 
 ### Fixed
+- `os/linux/backup-agent.sh`: Estagio 2 (`restic copy` para a nuvem) falhava
+  sempre em execucao nao-interativa (cron ou script manual sem terminal)
+  com `unable to read password` / `unable to get terminal state: inappropriate
+  ioctl for device`. O comando usava a flag depreciada `--repo2` sem nunca
+  fornecer a senha do repositorio de origem — o Restic tentava pedi-la de
+  forma interativa e nao havia terminal disponivel. Migrado para
+  `-r "$REPO_CLOUD" copy --from-repo "$REPO_LOCAL"` (sintaxe atual, nao
+  depreciada) com `RESTIC_FROM_PASSWORD="$RESTIC_PASSWORD"` (mesma senha
+  mestre usada nos dois repositorios). `docs/architecture.md` atualizado
+  para refletir `--from-repo`. Reproduzido e validado com o binario real
+  do `restic` (nao so mock): sem o fix, falha exatamente como no servidor;
+  com o fix, a copia do snapshot para o repositorio de destino funciona.
 - `devops/zabbix/template_backup_agent.xml`: tag raiz corrigida de
   `<template_groups>` para `<groups>` — `template_groups` so existe a
   partir do Zabbix 6.2, mas o arquivo declara `<version>6.0</version>`,

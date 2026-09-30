@@ -31,7 +31,7 @@ estatica**, gerada localmente por host.
 └─────────────┼──────────────────────────────────────────────────┘
               │ 3. Telemetria TCP/10051 (TLS PSK)
               ▼
-   ┌───────────────────────────┐        4. restic copy --repo2
+   ┌───────────────────────────┐        4. restic copy --from-repo
    │   ZABBIX SERVER CENTRAL   │        ┌───────────────────────┐
    └───────────────────────────┘        │ S3 / Wasabi / B2/MinIO │
                                          └───────────────────────┘
@@ -42,8 +42,8 @@ estatica**, gerada localmente por host.
 1. **Estagio 1 (Backup Local):** `restic backup` cria um snapshot
    desduplicado e criptografado no repositorio local (`REPO_LOCAL`),
    normalmente em disco secundario ou ponto de montagem NFS/iSCSI.
-2. **Estagio 2 (Sincronizacao em Nuvem):** `restic copy --repo2` replica os
-   snapshots do repositorio local para o repositorio remoto (`REPO_CLOUD`),
+2. **Estagio 2 (Sincronizacao em Nuvem):** `restic copy --from-repo` replica
+   os snapshots do repositorio local para o repositorio remoto (`REPO_CLOUD`),
    suportando qualquer backend compativel com Restic (S3, Wasabi, Backblaze
    B2, MinIO; Google Drive/OneDrive via Rclone).
 3. **Retencao:** `restic forget --prune` aplica politicas de retencao
