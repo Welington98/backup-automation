@@ -121,5 +121,11 @@ ansible-playbook -i inventory/meu-cliente/hosts.yml playbook.yml
 - [ ] Repositorios Restic (local e nuvem) inicializados (`restic init`)
 - [ ] Host cadastrado no Zabbix Server com Encryption PSK (gerada por
       `backup-agent-generate-psk.sh` no primeiro deploy)
+- [ ] Host group no Zabbix Server = `client_name` deste cliente (necessario
+      para o dashboard Grafana consolidado, ver
+      `docs/grafana-dashboards.md`)
 - [ ] `ansible-inventory --list` e `ansible ... -m ping` validados
 - [ ] Dry-run (`--check --diff`) revisado antes do deploy real
+- [ ] Cron de verificacao de integridade (`backup-agent.sh check`, semanal)
+      agendado pela role e `restic.check.local.status` chegando no Zabbix
+      (ver `docs/zabbix-monitoring.md` secao 6.1)

@@ -64,6 +64,11 @@ CRON_FILE="/etc/cron.d/backup-agent"
 cat > "$CRON_FILE" <<'EOF'
 # backup-agent - Execucao diaria as 03:30
 30 3 * * * root /usr/local/bin/backup-agent.sh > /dev/null 2>&1
+
+# backup-agent - Verificacao de integridade (restic check, so metadados)
+# semanal, domingo as 04:30 - fora do horario do pipeline diario para nao
+# disputar o lock (flock) com ele.
+30 4 * * 0 root /usr/local/bin/backup-agent.sh check > /dev/null 2>&1
 EOF
 chmod 644 "$CRON_FILE"
 

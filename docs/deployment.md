@@ -240,11 +240,22 @@ ansible-playbook -i inventory/meu-cliente/hosts.yml playbook.yml --limit meu-cli
 ```cron
 # Execucao diaria as 03:30
 30 3 * * * root /usr/local/bin/backup-agent.sh > /dev/null 2>&1
+
+# Verificacao de integridade (restic check, so metadados) semanal,
+# domingo as 04:30 - fora do horario do pipeline diario para nao disputar
+# o lock (flock) com ele.
+30 4 * * 0 root /usr/local/bin/backup-agent.sh check > /dev/null 2>&1
 ```
 
 Instalado automaticamente em `/etc/cron.d/backup-agent` pelo `install.sh`
 (ou pela role Ansible). Nao ha job de renovacao de certificado nesta fase,
 pois a PSK e estatica.
+
+> A verificacao semanal so confere estrutura/metadados (rapida). Para
+> validar tambem o conteudo dos pack files (`restic check --read-data`),
+> mais lento e com custo de egress na nuvem, adicione uma entrada de cron
+> propria com menor frequencia (ex.: mensal) — ver
+> [`docs/zabbix-monitoring.md`](zabbix-monitoring.md) secao 6.1.
 
 ## 5. Checklist pos-deploy
 
@@ -258,4 +269,7 @@ pois a PSK e estatica.
 - [ ] Item `restic.retention.cloud.status` no Zabbix recebeu valor `1`
       (apenas se `ENABLE_CLOUD_SYNC=true`).
 - [ ] Trigger "No Data Received (26h)" nao esta disparada.
+- [ ] `sudo /usr/local/bin/backup-agent.sh check` roda sem erros e os itens
+      `restic.check.local.status` (e `restic.check.cloud.status`, se
+      `ENABLE_CLOUD_SYNC=true`) chegam com valor `1` no Zabbix.
 - [ ] `/var/log/backup-agent.log` sem erros na ultima execucao.

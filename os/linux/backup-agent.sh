@@ -17,6 +17,7 @@ Uso:
   backup-agent.sh list               Lista os snapshots existentes (local e nuvem)
   backup-agent.sh files [opcoes]     Lista os arquivos dentro de um snapshot
   backup-agent.sh restore [opcoes]   Restaura um snapshot (ou parte dele) para um diretorio
+  backup-agent.sh check [opcoes]     Verifica a integridade dos repositorios (restic check)
   backup-agent.sh --version          Mostra a versao instalada e sai
   backup-agent.sh --help             Mostra esta ajuda e sai
 
@@ -30,17 +31,28 @@ Opcoes de 'restore' (--target e obrigatorio):
   --snapshot <id>      Snapshot a restaurar (padrao: latest)
   --include <padrao>   Restaura so os caminhos que casam com o padrao, em vez do snapshot inteiro
 
+Opcoes de 'check':
+  --read-data          Verifica tambem o conteudo dos pack files (lento, le o repositorio
+                        inteiro). Sem essa opcao, so a estrutura/metadados sao verificados.
+
 Exemplos:
   backup-agent.sh files
   backup-agent.sh files --cloud --snapshot a1b2c3d4
   backup-agent.sh restore --target /tmp/restauracao
   backup-agent.sh restore --target /tmp/restauracao --include /etc/backup-agent
+  backup-agent.sh check
+  backup-agent.sh check --read-data
 
 Pipeline completo (sem argumentos):
   1. Backup local                (restic backup)
   2. Sincronizacao com a nuvem    (restic copy), se ENABLE_CLOUD_SYNC=true
   3. Retencao / expurgo           (restic forget --prune), local e nuvem
   4. Metricas para o Zabbix       (tamanho e snapshots, local e nuvem)
+
+'check' e uma verificacao de integridade (restic check) separada do pipeline
+diario - roda sob demanda ou por um cron proprio (ver docs/deployment.md e
+docs/zabbix-monitoring.md), pois --read-data le o repositorio inteiro e pode
+ser lento/custoso (egress na nuvem).
 
 Configuracao: /etc/backup-agent/backup.env
 Log:          \${LOG_PATH:-/var/log/backup-agent.log}
@@ -70,6 +82,44 @@ else
     echo "CRITICAL: Arquivo de configuracao $ENV_FILE nao encontrado!"
     exit 1
 fi
+
+LOG_FILE="${LOG_PATH:-/var/log/backup-agent.log}"
+LOCK_FILE="${LOCK_PATH:-/var/lock/backup-agent.lock}"
+
+# Impede duas execucoes simultaneas do pipeline e/ou do 'check' no mesmo
+# host (ex.: cron do pipeline em cima do cron do check, ou duas chamadas
+# manuais em paralelo) - evita que o Restic rejeite uma das duas no meio de
+# um forget/prune ou check com "repository is already locked".
+acquire_lock() {
+    exec 200>"$LOCK_FILE"
+    if ! flock -n 200; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] Outra execucao do backup-agent.sh ja esta em andamento (lock $LOCK_FILE). Abortando." >> "$LOG_FILE"
+        exit 1
+    fi
+}
+
+# Funcao para telemetria Zabbix Trapper
+send_zabbix() {
+    local key="$1"
+    local val="$2"
+
+    if [ "$ENABLE_ZABBIX" = "true" ] && [ -n "$ZABBIX_SERVER" ]; then
+        local tls_args=()
+
+        if [ "$ENABLE_ZABBIX_TLS" = "true" ]; then
+            tls_args=(--tls-connect psk
+                      --tls-psk-identity "$ZABBIX_TLS_PSK_IDENTITY"
+                      --tls-psk-file "$ZABBIX_TLS_PSK_FILE")
+        fi
+
+        zabbix_sender -z "$ZABBIX_SERVER" \
+                      -p "${ZABBIX_PORT:-10051}" \
+                      -s "$ZABBIX_HOSTNAME" \
+                      -k "$key" \
+                      -o "$val" \
+                      "${tls_args[@]}" > /dev/null 2>&1
+    fi
+}
 
 # Comandos de exploracao/restauracao (list, files, restore) sao so leitura
 # no repositorio Restic (restore so escreve no --target escolhido, nunca no
@@ -157,6 +207,64 @@ case "${1:-}" in
         exit $?
         ;;
 
+    check)
+        shift
+        CHECK_ARGS=()
+
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --read-data) CHECK_ARGS+=(--read-data); shift ;;
+                *)
+                    echo "[ERROR] Opcao desconhecida para 'check': $1" >&2
+                    echo "Uso: backup-agent.sh check [--read-data]" >&2
+                    exit 1
+                    ;;
+            esac
+        done
+
+        acquire_lock
+
+        CHECK_START=$(date +%s)
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] === INICIANDO VERIFICACAO DE INTEGRIDADE (restic check) ===" >> "$LOG_FILE"
+
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [CHECK] Verificando repositorio local ($REPO_LOCAL)..." >> "$LOG_FILE"
+        restic -r "$REPO_LOCAL" check "${CHECK_ARGS[@]}" >> "$LOG_FILE" 2>&1
+        LOCAL_CHECK_STATUS=$?
+
+        if [ $LOCAL_CHECK_STATUS -eq 0 ]; then
+            send_zabbix "restic.check.local.status" 1
+        else
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] restic check encontrou problemas no repositorio local." >> "$LOG_FILE"
+            send_zabbix "restic.check.local.status" 0
+        fi
+
+        OVERALL_CHECK_STATUS=$LOCAL_CHECK_STATUS
+
+        if [ "$ENABLE_CLOUD_SYNC" = "true" ]; then
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] [CHECK] Verificando repositorio em nuvem ($REPO_CLOUD)..." >> "$LOG_FILE"
+            restic -r "$REPO_CLOUD" check "${CHECK_ARGS[@]}" >> "$LOG_FILE" 2>&1
+            CLOUD_CHECK_STATUS=$?
+
+            if [ $CLOUD_CHECK_STATUS -eq 0 ]; then
+                send_zabbix "restic.check.cloud.status" 1
+            else
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] restic check encontrou problemas no repositorio em nuvem." >> "$LOG_FILE"
+                send_zabbix "restic.check.cloud.status" 0
+                OVERALL_CHECK_STATUS=$CLOUD_CHECK_STATUS
+            fi
+        fi
+
+        CHECK_END=$(date +%s)
+        send_zabbix "restic.check.duration" "$((CHECK_END - CHECK_START))"
+
+        if [ $OVERALL_CHECK_STATUS -eq 0 ]; then
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] Verificacao de integridade concluida sem erros." >> "$LOG_FILE"
+        fi
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] === VERIFICACAO FINALIZADA ===" >> "$LOG_FILE"
+
+        exit $OVERALL_CHECK_STATUS
+        ;;
+
     "") ;; # sem comando -> roda o pipeline completo abaixo
 
     *)
@@ -167,41 +275,9 @@ case "${1:-}" in
         ;;
 esac
 
-LOG_FILE="${LOG_PATH:-/var/log/backup-agent.log}"
 START_TIME=$(date +%s)
 
-# Impede duas execucoes simultaneas (ex.: teste manual em cima do cron, ou
-# duas chamadas manuais em paralelo) - evita que o Restic rejeite a segunda
-# instancia no meio de um forget/prune com "repository is already locked".
-LOCK_FILE="${LOCK_PATH:-/var/lock/backup-agent.lock}"
-exec 200>"$LOCK_FILE"
-if ! flock -n 200; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] Outra execucao do backup-agent.sh ja esta em andamento (lock $LOCK_FILE). Abortando." >> "$LOG_FILE"
-    exit 1
-fi
-
-# Funcao para telemetria Zabbix Trapper
-send_zabbix() {
-    local key="$1"
-    local val="$2"
-
-    if [ "$ENABLE_ZABBIX" = "true" ] && [ -n "$ZABBIX_SERVER" ]; then
-        local tls_args=()
-
-        if [ "$ENABLE_ZABBIX_TLS" = "true" ]; then
-            tls_args=(--tls-connect psk
-                      --tls-psk-identity "$ZABBIX_TLS_PSK_IDENTITY"
-                      --tls-psk-file "$ZABBIX_TLS_PSK_FILE")
-        fi
-
-        zabbix_sender -z "$ZABBIX_SERVER" \
-                      -p "${ZABBIX_PORT:-10051}" \
-                      -s "$ZABBIX_HOSTNAME" \
-                      -k "$key" \
-                      -o "$val" \
-                      "${tls_args[@]}" > /dev/null 2>&1
-    fi
-}
+acquire_lock
 
 # Reporta tamanho e quantidade de snapshots de um repositorio (local ou
 # nuvem, identificados pelo sufixo) via restic.repo.size.<sufixo> e

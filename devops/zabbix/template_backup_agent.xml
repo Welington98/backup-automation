@@ -128,6 +128,77 @@
                     </tags>
                 </item>
                 <item>
+                    <uuid>5a3b2f0e1a1a4b2ab7c9a6b1e6c9d9f2</uuid>
+                    <name>Local Check Status</name>
+                    <type>TRAP</type>
+                    <key>restic.check.local.status</key>
+                    <value_type>UNSIGNED</value_type>
+                    <description>1 = restic check do repositorio local concluido sem erros de integridade, 0 = falha. Enviado pelo comando 'backup-agent.sh check' (rotina separada do pipeline diario, ver docs/zabbix-monitoring.md)</description>
+                    <valuemap>
+                        <name>Backup Agent Status</name>
+                    </valuemap>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>backup-agent</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>b1c6a6a0f2c5470f9c4c4c7a2b9f1a3e</uuid>
+                            <expression>last(/Backup Agent/restic.check.local.status)=0</expression>
+                            <name>Backup Agent - Local Integrity Check Failed on {HOST.NAME}</name>
+                            <priority>HIGH</priority>
+                        </trigger>
+                        <trigger>
+                            <uuid>c2d7b7b1e3d6481fa5d5d8b3c0a2b4f0</uuid>
+                            <expression>nodata(/Backup Agent/restic.check.local.status,8d)=1</expression>
+                            <name>Backup Agent - No Integrity Check Data Received (8d) on {HOST.NAME}</name>
+                            <priority>AVERAGE</priority>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>6d4c3a1f2b2b4c3ab8d0b7c2f7d0e0a3</uuid>
+                    <name>Cloud Check Status</name>
+                    <type>TRAP</type>
+                    <key>restic.check.cloud.status</key>
+                    <value_type>UNSIGNED</value_type>
+                    <description>1 = restic check do repositorio em nuvem concluido sem erros de integridade, 0 = falha. So enviado quando ENABLE_CLOUD_SYNC=true, pelo comando 'backup-agent.sh check'</description>
+                    <valuemap>
+                        <name>Backup Agent Status</name>
+                    </valuemap>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>backup-agent</value>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>d3e8c8c2f4e7492fb6e6e9c4d1b3c5a1</uuid>
+                            <expression>last(/Backup Agent/restic.check.cloud.status)=0</expression>
+                            <name>Backup Agent - Cloud Integrity Check Failed on {HOST.NAME}</name>
+                            <priority>HIGH</priority>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>7e5d4b2a3c3c5d4bc9e1c8d3a8e1f1b4</uuid>
+                    <name>Check Duration</name>
+                    <type>TRAP</type>
+                    <key>restic.check.duration</key>
+                    <value_type>UNSIGNED</value_type>
+                    <units>s</units>
+                    <description>Duracao total do 'backup-agent.sh check' (restic check local + nuvem), em segundos</description>
+                    <tags>
+                        <tag>
+                            <tag>component</tag>
+                            <value>backup-agent</value>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
                     <uuid>98089ceaa5744687bf87fc134d42a8de</uuid>
                     <name>Local Retention Status</name>
                     <type>TRAP</type>

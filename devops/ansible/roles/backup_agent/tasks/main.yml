@@ -77,3 +77,12 @@
     hour: "{{ backup_agent_cron_hour }}"
     job: "{{ backup_agent_bin_dir }}/backup-agent.sh > /dev/null 2>&1"
     user: root
+
+- name: Agendar verificacao de integridade (restic check) semanal via cron
+  cron:
+    name: "backup-agent integrity check"
+    minute: "{{ backup_agent_check_cron_minute }}"
+    hour: "{{ backup_agent_check_cron_hour }}"
+    weekday: "{{ backup_agent_check_cron_weekday }}"
+    job: "{{ backup_agent_bin_dir }}/backup-agent.sh check > /dev/null 2>&1"
+    user: root
