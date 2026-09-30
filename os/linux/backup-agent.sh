@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# BACKUP AGENT v1.0.0 (Linux) - Fase 1 (sem HashiCorp Vault)
+# BACKUP AGENT (Linux) - Fase 1 (sem HashiCorp Vault)
 # Arquitetura: Dual-Stage (Local -> Nuvem) + Telemetria Zabbix (TLS via PSK)
 # ==============================================================================
+
+# Atualizado automaticamente pelo semantic-release a cada release (nao
+# editar a mao - ver .releaserc.json, plugin @semantic-release/exec).
+BACKUP_AGENT_VERSION="0.0.0-dev"
+
+if [ "$1" = "--version" ] || [ "$1" = "-v" ]; then
+    echo "backup-agent $BACKUP_AGENT_VERSION"
+    exit 0
+fi
 
 set -o pipefail
 
@@ -66,7 +75,7 @@ report_repo_metrics() {
     [ -n "$snapshot_count" ] && send_zabbix "restic.repo.snapshots.${suffix}" "$snapshot_count"
 }
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] === INICIANDO AGENTE DE BACKUP ===" >> "$LOG_FILE"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] === INICIANDO AGENTE DE BACKUP v$BACKUP_AGENT_VERSION ===" >> "$LOG_FILE"
 
 # ------------------------------------------------------------------------------
 # ETAPA 1: BACKUP LOCAL (SNAPSHOT)
@@ -94,7 +103,13 @@ fi
 if [ "$ENABLE_CLOUD_SYNC" = "true" ]; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [STAGE 2] Sincronizando com repositorio em nuvem..." >> "$LOG_FILE"
 
-    restic -r "$REPO_LOCAL" copy --repo2 "$REPO_CLOUD" >> "$LOG_FILE" 2>&1
+    # RESTIC_FROM_PASSWORD e a senha do repositorio de origem (--from-repo).
+    # Como local e nuvem usam a mesma RESTIC_PASSWORD (senha mestre unica,
+    # ver backup.env.template), reaproveitamos o mesmo valor - sem isso o
+    # restic tenta pedir a senha de forma interativa e falha em
+    # background/cron com "unable to read password".
+    RESTIC_FROM_PASSWORD="$RESTIC_PASSWORD" \
+        restic -r "$REPO_CLOUD" copy --from-repo "$REPO_LOCAL" >> "$LOG_FILE" 2>&1
     CLOUD_STATUS=$?
 else
     CLOUD_STATUS=0

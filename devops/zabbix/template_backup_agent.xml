@@ -26,6 +26,9 @@
                     <key>restic.backup.status</key>
                     <value_type>UNSIGNED</value_type>
                     <description>1 = backup e sincronizacao concluidos com sucesso, 0 = falha</description>
+                    <valuemap>
+                        <name>Backup Agent Status</name>
+                    </valuemap>
                     <tags>
                         <tag>
                             <tag>component</tag>
@@ -131,6 +134,9 @@
                     <key>restic.retention.local.status</key>
                     <value_type>UNSIGNED</value_type>
                     <description>1 = forget/prune do repositorio local concluido com sucesso, 0 = falha (ex.: repositorio bloqueado por outra execucao concorrente)</description>
+                    <valuemap>
+                        <name>Backup Agent Status</name>
+                    </valuemap>
                     <tags>
                         <tag>
                             <tag>component</tag>
@@ -153,6 +159,9 @@
                     <key>restic.retention.cloud.status</key>
                     <value_type>UNSIGNED</value_type>
                     <description>1 = forget/prune do repositorio em nuvem concluido com sucesso, 0 = falha. So enviado quando ENABLE_CLOUD_SYNC=true</description>
+                    <valuemap>
+                        <name>Backup Agent Status</name>
+                    </valuemap>
                     <tags>
                         <tag>
                             <tag>component</tag>
@@ -169,6 +178,22 @@
                     </triggers>
                 </item>
             </items>
+            <valuemaps>
+                <valuemap>
+                    <uuid>7143a6be31d346fea47ecba40268d4af</uuid>
+                    <name>Backup Agent Status</name>
+                    <mappings>
+                        <mapping>
+                            <value>0</value>
+                            <newvalue>Falha</newvalue>
+                        </mapping>
+                        <mapping>
+                            <value>1</value>
+                            <newvalue>OK</newvalue>
+                        </mapping>
+                    </mappings>
+                </valuemap>
+            </valuemaps>
         </template>
     </templates>
 </zabbix_export>
