@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zabbix_export>
     <version>6.0</version>
-    <template_groups>
-        <template_group>
+    <groups>
+        <group>
             <uuid>eefa430378e54be5b8dddd652693dbd2</uuid>
             <name>Templates/Backup</name>
-        </template_group>
-    </template_groups>
+        </group>
+    </groups>
     <templates>
         <template>
             <uuid>dbcec913dbc440fea76f85d976a74243</uuid>

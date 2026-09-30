@@ -5,7 +5,20 @@ versionamento seguindo [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+- `docs/zabbix-monitoring.md`: guia completo de configuracao do
+  monitoramento Zabbix — importar template, criar host (sem interface,
+  itens sao Trapper), cadastrar encryption PSK, variaveis do `backup.env`,
+  teste manual com `zabbix_sender`, tabela de todos os itens enviados pelo
+  `backup-agent.sh` e troubleshooting comum.
+
 ### Fixed
+- `devops/zabbix/template_backup_agent.xml`: tag raiz corrigida de
+  `<template_groups>` para `<groups>` — `template_groups` so existe a
+  partir do Zabbix 6.2, mas o arquivo declara `<version>6.0</version>`,
+  causando falha na importacao (`Invalid tag "/zabbix_export": unexpected
+  tag "template_groups"`). Corrigido e **validado com um import real**
+  contra um Zabbix Server 6.0 (Docker), incluindo reimportacao.
 - `os/linux/backup-agent.sh`: adicionado lock proprio (`flock` em
   `/var/lock/backup-agent.lock`) para impedir duas execucoes simultaneas
   do script no mesmo host — antes, rodar o script em paralelo (ex.: teste

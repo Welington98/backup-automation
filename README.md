@@ -24,7 +24,7 @@ backup-agent/
 ├── os/macos/            # reservado (fase futura)
 ├── devops/ansible/      # role de deploy automatizado
 ├── devops/zabbix/       # template Zabbix Trapper
-└── docs/                # arquitetura, deployment, disaster recovery
+└── docs/                # arquitetura, deployment, monitoramento Zabbix, disaster recovery
 ```
 
 ## Quick start
@@ -38,6 +38,7 @@ sudo /usr/local/bin/backup-agent.sh
 ```
 
 Passo a passo completo: [`docs/deployment.md`](docs/deployment.md).
+Configurar metricas no Zabbix: [`docs/zabbix-monitoring.md`](docs/zabbix-monitoring.md).
 Procedimentos de recuperacao: [`docs/disaster-recovery.md`](docs/disaster-recovery.md).
 
 ## Roadmap
