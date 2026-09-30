@@ -6,7 +6,7 @@
 
 # Atualizado automaticamente pelo semantic-release a cada release (nao
 # editar a mao - ver .releaserc.json, plugin @semantic-release/exec).
-BACKUP_AGENT_VERSION="0.0.0-dev"
+BACKUP_AGENT_VERSION="1.0.0"
 
 if [ "$1" = "--version" ] || [ "$1" = "-v" ]; then
     echo "backup-agent $BACKUP_AGENT_VERSION"

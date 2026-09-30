@@ -1,3 +1,10 @@
+# 1.0.0 (2026-09-30)
+
+
+### Features
+
+* add semantic-release for automated versioning ([e6751ad](https://github.com/Welington98/backup-automation/commit/e6751ad6921deebac1822eeb2d2728d1e6ff85c0))
+
 # Changelog
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
