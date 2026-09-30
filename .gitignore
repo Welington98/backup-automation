@@ -8,3 +8,6 @@ backup.env
 # Editores / SO
 .DS_Store
 *.swp
+
+# Dependencias do semantic-release (npm) - package-lock.json fica versionado
+node_modules/

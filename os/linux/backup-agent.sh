@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# BACKUP AGENT v1.0.0 (Linux) - Fase 1 (sem HashiCorp Vault)
+# BACKUP AGENT (Linux) - Fase 1 (sem HashiCorp Vault)
 # Arquitetura: Dual-Stage (Local -> Nuvem) + Telemetria Zabbix (TLS via PSK)
 # ==============================================================================
+
+# Atualizado automaticamente pelo semantic-release a cada release (nao
+# editar a mao - ver .releaserc.json, plugin @semantic-release/exec).
+BACKUP_AGENT_VERSION="0.0.0-dev"
+
+if [ "$1" = "--version" ] || [ "$1" = "-v" ]; then
+    echo "backup-agent $BACKUP_AGENT_VERSION"
+    exit 0
+fi
 
 set -o pipefail
 
@@ -66,7 +75,7 @@ report_repo_metrics() {
     [ -n "$snapshot_count" ] && send_zabbix "restic.repo.snapshots.${suffix}" "$snapshot_count"
 }
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] === INICIANDO AGENTE DE BACKUP ===" >> "$LOG_FILE"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] === INICIANDO AGENTE DE BACKUP v$BACKUP_AGENT_VERSION ===" >> "$LOG_FILE"
 
 # ------------------------------------------------------------------------------
 # ETAPA 1: BACKUP LOCAL (SNAPSHOT)

@@ -3,6 +3,13 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 versionamento seguindo [SemVer](https://semver.org/lang/pt-BR/).
 
+> A partir daqui, este arquivo e atualizado automaticamente pelo
+> [semantic-release](https://semantic-release.gitbook.io/) a cada release,
+> com base nas mensagens de commit (Conventional Commits — ver
+> [`CONTRIBUTING.md`](CONTRIBUTING.md)). As entradas abaixo de `[Unreleased]`
+> foram escritas a mao durante o desenvolvimento inicial, antes dessa
+> automacao existir.
+
 ## [Unreleased]
 
 ### Added

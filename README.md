@@ -78,6 +78,22 @@ Esse e o caminho que escala para varios servidores/clientes sem precisar
 entrar em cada host manualmente — ver
 [`devops/ansible/inventory/README.md`](devops/ansible/inventory/README.md).
 
+## Versionamento
+
+O projeto usa [semantic-release](https://semantic-release.gitbook.io/):
+toda mudanca mesclada em `main` com uma mensagem de commit no padrao
+[Conventional Commits](https://www.conventionalcommits.org/) (`fix:`,
+`feat:`, etc.) gera automaticamente uma nova versao, atualiza o
+`CHANGELOG.md`, cria uma tag e uma GitHub Release. A versao tambem fica
+gravada no proprio script:
+
+```bash
+backup-agent.sh --version
+```
+
+Convencao de commits e o que cada tipo faz na versao: ver
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## Roadmap
 
 - [x] Fase 1: backup dual-stage, retencao, telemetria Zabbix (PSK estatica).
