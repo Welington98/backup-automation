@@ -23,6 +23,21 @@ else
     exit 1
 fi
 
+# Lista os snapshots existentes (local e, se habilitada, nuvem). So leitura
+# - nao usa o lock nem escreve no log, pra poder rodar a qualquer momento
+# mesmo com um backup em andamento.
+if [ "$1" = "list" ]; then
+    echo "=== Snapshots - Repositorio Local ($REPO_LOCAL) ==="
+    restic -r "$REPO_LOCAL" snapshots
+
+    if [ "$ENABLE_CLOUD_SYNC" = "true" ]; then
+        echo ""
+        echo "=== Snapshots - Repositorio Nuvem ($REPO_CLOUD) ==="
+        restic -r "$REPO_CLOUD" snapshots
+    fi
+    exit 0
+fi
+
 LOG_FILE="${LOG_PATH:-/var/log/backup-agent.log}"
 START_TIME=$(date +%s)
 

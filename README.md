@@ -35,6 +35,9 @@ sudo vi /etc/backup-agent/backup.env
 restic -r <REPO_LOCAL> init
 sudo /usr/local/bin/backup-agent-generate-psk.sh
 sudo /usr/local/bin/backup-agent.sh
+
+# listar os snapshots existentes (local e nuvem, sem mexer no backup.env na mao)
+sudo /usr/local/bin/backup-agent.sh list
 ```
 
 Passo a passo completo: [`docs/deployment.md`](docs/deployment.md).
