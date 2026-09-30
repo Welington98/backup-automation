@@ -52,19 +52,26 @@ de aplicar a atualizacao depende de como cada servidor foi instalado.
 
 ### Instalacao manual (`install.sh`)
 
-No servidor, atualize o repositorio local e reaplique so os scripts (nao
-mexe em `backup.env` nem `excludes.txt` que ja estao configurados):
+No servidor, de dentro do clone do repositorio:
 
 ```bash
 cd backup-agent   # pasta onde o repo foi clonado no servidor
-git pull origin main
-
-sudo install -m 750 os/linux/backup-agent.sh /usr/local/bin/backup-agent.sh
-sudo install -m 750 os/linux/generate-psk.sh /usr/local/bin/backup-agent-generate-psk.sh
+sudo os/linux/update.sh
 ```
 
-Se o `template_backup_agent.xml` tambem mudou, reimporte-o manualmente no
-Zabbix Server (ver [`docs/zabbix-monitoring.md`](docs/zabbix-monitoring.md)).
+O `update.sh`:
+1. Recusa rodar se houver alteracoes locais nao commitadas no clone (pra
+   nao perder nada sem querer).
+2. `git fetch` + `git merge --ff-only` de `origin/main` — falha com
+   mensagem clara se o clone local divergiu do remoto, em vez de tentar
+   adivinhar um merge.
+3. Reaplica `backup-agent.sh` e `generate-psk.sh` em `/usr/local/bin`
+   (sem mexer em `backup.env`/`excludes.txt` ja configurados).
+4. Avisa se `devops/zabbix/template_backup_agent.xml` mudou (lembrete pra
+   reimportar no Zabbix Server — ver
+   [`docs/zabbix-monitoring.md`](docs/zabbix-monitoring.md)).
+5. Mostra a versao final com `backup-agent.sh --version`, pra confirmar
+   visualmente que a atualizacao realmente pegou.
 
 ### Deploy via Ansible
 
