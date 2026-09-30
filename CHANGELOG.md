@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/Welington98/backup-automation/compare/v1.2.0...v1.3.0) (2026-09-30)
+
+
+### Features
+
+* add restic check integrity verification with Zabbix metrics ([6233cbe](https://github.com/Welington98/backup-automation/commit/6233cbed1e48d817e4449dee3a3dcf88217a4175))
+
 # [1.2.0](https://github.com/Welington98/backup-automation/compare/v1.1.0...v1.2.0) (2026-09-30)
 
 
