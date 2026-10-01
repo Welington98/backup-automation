@@ -1,3 +1,15 @@
+# [1.5.0](https://github.com/Welington98/backup-automation/compare/v1.4.0...v1.5.0) (2026-10-01)
+
+
+### Bug Fixes
+
+* enable Zabbix repo on Debian/Ubuntu, fix dnf/Amazon Linux install gaps ([012b673](https://github.com/Welington98/backup-automation/commit/012b673b238cd94c17faddf8bcef0fc58d46c8cf))
+
+
+### Features
+
+* add real multi-distro support (Debian/Ubuntu, RHEL family, Amazon Linux) ([05d3964](https://github.com/Welington98/backup-automation/commit/05d3964e475eaa6bf7a38e1d318609eb63e71e0d))
+
 # [1.4.0](https://github.com/Welington98/backup-automation/compare/v1.3.1...v1.4.0) (2026-10-01)
 
 
