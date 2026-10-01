@@ -67,16 +67,29 @@ jobs:
         run: python3 scripts/validate-zabbix-template.py
 
   functional-test:
-    name: Functional test (backup-agent.sh)
+    name: Functional test (backup-agent.sh) - Debian/Ubuntu
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install restic and jq
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y restic jq
+      - name: Instalar dependencias via install.sh
+        run: sudo os/linux/install.sh < /dev/null
 
       - name: Run backup-agent.sh functional test
         run: sudo os/linux/test/functional-test.sh
+
+  functional-test-rhel:
+    name: Functional test (backup-agent.sh) - RHEL family (Rocky Linux 9)
+    runs-on: ubuntu-latest
+    container:
+      image: rockylinux:9
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar dependencias via install.sh (dnf + EPEL + repo Zabbix)
+        run: os/linux/install.sh < /dev/null
+
+      - name: Run backup-agent.sh functional test
+        run: os/linux/test/functional-test.sh
