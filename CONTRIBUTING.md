@@ -1,5 +1,32 @@
 # Contribuindo
 
+## CI (.github/workflows/ci.yml)
+
+Toda `pull_request` para `main` e todo push em branch diferente de `main`
+rodam 4 checks automaticamente:
+
+| Job | O que valida |
+|---|---|
+| `lint-shell` | `bash -n` (sintaxe) + `shellcheck` (severidade warning) em todo `*.sh` de `os/` e `devops/` |
+| `lint-yaml` | `yamllint` (config em `.yamllint.yml`) nos YAML do repo (Ansible, workflows) |
+| `validate-zabbix-template` | `scripts/validate-zabbix-template.py` - XML bem formado e todo `<uuid>` e um UUIDv4 valido e unico. Existe porque um UUID invalido ja chegou a um PR e so foi descoberto na hora de importar o template no Zabbix Server ("Invalid parameter '/N/uuid': UUIDv4 is expected.") |
+| `functional-test` | `os/linux/test/functional-test.sh` - roda o pipeline completo, `check` (rapido e `--read-data`), `list`, `files`, `restore`, `--version`/`--help` e os casos de erro (comando/opcao invalida) contra um repositorio Restic descartavel, e falha se qualquer saida/exit code esperado nao bater |
+
+Rode localmente antes de abrir o PR (reduz o ciclo de espera do CI):
+
+```bash
+# lint
+shellcheck -x --severity=warning os/linux/*.sh os/linux/test/*.sh
+yamllint -c .yamllint.yml .
+python3 scripts/validate-zabbix-template.py
+
+# teste funcional (precisa de sudo, restic e jq instalados)
+sudo os/linux/test/functional-test.sh
+```
+
+`.github/workflows/release.yml` e separado e so roda em push direto a
+`main` (gera version/changelog/release - ver secao abaixo).
+
 ## Versionamento (semantic-release)
 
 Este repositorio usa [semantic-release](https://semantic-release.gitbook.io/)

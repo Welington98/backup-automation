@@ -15,7 +15,11 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 if [ -f "$ENV_FILE" ]; then
-    set -o allexport; source "$ENV_FILE"; set +o allexport
+    # Caminho so existe no host de destino, nao no repo.
+    set -o allexport
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +o allexport
 else
     echo "[CRITICAL] Arquivo $ENV_FILE nao encontrado!" >&2
     exit 1

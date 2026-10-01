@@ -77,7 +77,11 @@ set -o pipefail
 
 ENV_FILE="/etc/backup-agent/backup.env"
 if [ -f "$ENV_FILE" ]; then
-    set -o allexport; source "$ENV_FILE"; set +o allexport
+    # Caminho so existe no host de destino, nao no repo.
+    set -o allexport
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +o allexport
 else
     echo "CRITICAL: Arquivo de configuracao $ENV_FILE nao encontrado!"
     exit 1
