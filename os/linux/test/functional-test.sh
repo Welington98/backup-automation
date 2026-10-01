@@ -119,6 +119,60 @@ echo "=== 9. --version / --help ==="
 "$SCRIPT" --help > "$OUT" 2>&1
 [ $? -eq 0 ] && grep -q "^Uso:" "$OUT" && pass "'--help' funciona" || fail "'--help' falhou"
 
+# A partir daqui os testes sobrescrevem /etc/backup-agent/backup.env de
+# proposito (e exatamente o que 'setup' faz) - por isso rodam por ultimo,
+# depois de todas as secoes que dependem do backup.env inicial (linha 30).
+echo "=== 10. setup (assistente de configuracao) ==="
+SETUP_REPO="$WORKDIR/repo-local-setup"
+"$SCRIPT" setup > "$OUT" 2>&1 <<ANSWERS
+y
+$WORKDIR/src
+$SETUP_REPO
+7
+n
+minha-senha-teste-setup
+minha-senha-teste-setup
+
+n
+n
+ANSWERS
+rc=$?
+[ $rc -eq 0 ] && pass "'setup' termina com exit 0" || { fail "'setup' termina com exit $rc"; cat "$OUT"; }
+
+grep -q 'RESTIC_PASSWORD="minha-senha-teste-setup"' /etc/backup-agent/backup.env \
+    && pass "'setup' grava o RESTIC_PASSWORD informado" \
+    || fail "'setup' nao gravou o RESTIC_PASSWORD esperado"
+
+grep -qF "REPO_LOCAL=\"$SETUP_REPO\"" /etc/backup-agent/backup.env \
+    && pass "'setup' grava o REPO_LOCAL informado" \
+    || fail "'setup' nao gravou o REPO_LOCAL esperado"
+
+RESTIC_PASSWORD="minha-senha-teste-setup" restic -r "$SETUP_REPO" cat config > /dev/null 2>&1 \
+    && pass "'setup' inicializa o repositorio Restic local" \
+    || fail "'setup' nao inicializou o repositorio Restic local"
+
+PERM=$(stat -c '%a' /etc/backup-agent/backup.env 2>/dev/null || stat -f '%Lp' /etc/backup-agent/backup.env 2>/dev/null)
+[ "$PERM" = "600" ] && pass "'setup' grava backup.env com permissao 600" || fail "'setup' gravou backup.env com permissao '$PERM' (esperado 600)"
+
+echo "=== 11. guarda contra RESTIC_PASSWORD placeholder ==="
+cat > /etc/backup-agent/backup.env <<EOF
+RESTIC_PASSWORD="TROCAR_SENHA_MESTRE_CRIPTOGRAFIA"
+BACKUP_TARGET_PATHS="$WORKDIR/src"
+BACKUP_TAG="ci-test"
+EXCLUDE_FILE="$WORKDIR/excludes.txt"
+REPO_LOCAL="$WORKDIR/repo-local"
+KEEP_LOCAL_DAILY=7
+ENABLE_CLOUD_SYNC="false"
+ENABLE_ZABBIX="false"
+LOG_PATH="$WORKDIR/backup-agent.log"
+LOCK_PATH="$WORKDIR/backup-agent.lock"
+EOF
+
+"$SCRIPT" > "$OUT" 2>&1
+rc=$?
+[ $rc -ne 0 ] && pass "pipeline recusa rodar com RESTIC_PASSWORD placeholder" || fail "pipeline deveria ter recusado rodar com RESTIC_PASSWORD placeholder"
+grep -q "valor padrao do template" "$OUT" && pass "mensagem de erro indica o placeholder" || fail "mensagem de erro nao indica o placeholder"
+
 echo
 echo "Resultado: $PASS passaram, $FAIL falharam"
 [ "$FAIL" -eq 0 ]

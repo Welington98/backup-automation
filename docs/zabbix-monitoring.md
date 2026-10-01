@@ -33,8 +33,41 @@ Guia completo para o backup-agent enviar metricas para o Zabbix Server via
 
 > Sempre que esse arquivo for atualizado no repositorio (itens/triggers
 > novos), reimporte — o Zabbix nao atualiza hosts ja cadastrados sozinho.
+> Isso vale tanto pro cadastro manual quanto pelo automatico (secao 3.2) —
+> nenhum dos dois reimporta o template, so vincula um template que ja
+> precisa existir no Zabbix Server.
 
-### 3.2 Criar o host
+### 3.2 Cadastrar o host (automatico via API, ou manual)
+
+**Caminho recomendado - automatico via API do Zabbix:** evita repetir os
+passos manuais abaixo a cada cliente/host novo, e nao exige que o PSK seja
+copiado e colado a mao.
+
+1. **Administration > API tokens > Create token** no Zabbix Server, com
+   permissao de escrita em `host.create`/`host.update`/`hostgroup.create`.
+2. Defina no `backup.env` do cliente (ou no `backup_agent_env` do Ansible,
+   via Vaultwarden — ver
+   [`devops/ansible/inventory/README.md`](../devops/ansible/inventory/README.md#segredos-vaultwarden)):
+   ```env
+   CLIENT_NAME="cliente-exemplo"
+   ZABBIX_API_URL="https://zabbix.suaempresa.com/api_jsonrpc.php"
+   ZABBIX_API_TOKEN="<token gerado no passo 1>"
+   ```
+3. Rode `sudo backup-agent.sh setup` (instalacao manual - o wizard chama o
+   registro automaticamente no fim, se `ZABBIX_API_URL`/`ZABBIX_API_TOKEN`
+   foram informados) ou `sudo backup-agent-zabbix-register.sh` direto (se
+   o `backup.env` ja existe); no Ansible, a role chama isso automaticamente
+   quando `ZABBIX_API_URL`/`ZABBIX_API_TOKEN` estao definidos.
+4. O script cria (ou atualiza, se o host ja existir) o host group
+   `CLIENT_NAME`, vincula o template **Backup Agent** (precisa ja estar
+   importado - passo 3.1) e configura a aba Encryption com a PSK gerada em
+   `ZABBIX_TLS_PSK_FILE` — equivalente aos passos manuais 3.2/3.3 abaixo,
+   sem precisar copiar/colar nada na UI.
+
+Detalhes de implementacao: `os/linux/zabbix-register.sh`.
+
+<details>
+<summary>Alternativa manual (sem API token)</summary>
 
 **Data collection > Hosts > Create host**:
 
@@ -50,7 +83,7 @@ Guia completo para o backup-agent enviar metricas para o Zabbix Server via
 - **Interfaces:** nao e necessario adicionar nenhuma — todos os itens do
   template sao Trapper.
 
-### 3.3 Configurar encryption (PSK)
+#### Configurar encryption (PSK)
 
 Na aba **Encryption** do host criado:
 
@@ -59,11 +92,15 @@ Na aba **Encryption** do host criado:
 - **PSK identity** e **PSK value:** gerados no cliente (secao 4.2 abaixo) —
   cole exatamente o que o script imprimir.
 
+</details>
+
 ## 4. Configurar no servidor cliente
 
 ### 4.1 Variaveis no `backup.env`
 
 ```env
+CLIENT_NAME="cliente-exemplo"
+
 ENABLE_ZABBIX="true"
 ZABBIX_SERVER="zabbix.suaempresa.com"
 ZABBIX_PORT="10051"
@@ -72,17 +109,25 @@ ZABBIX_HOSTNAME="HOSTNAME_EXATO_NO_ZABBIX"
 ENABLE_ZABBIX_TLS="true"
 ZABBIX_TLS_PSK_IDENTITY="backup-agent:HOSTNAME_EXATO_NO_ZABBIX"
 ZABBIX_TLS_PSK_FILE="/etc/backup-agent/certs/zabbix.psk"
+
+# Opcional - cadastro automatico via API (secao 3.2). Deixe em branco pra
+# manter o cadastro manual.
+ZABBIX_API_URL=""
+ZABBIX_API_TOKEN=""
 ```
 
 | Campo | O que colocar |
 |---|---|
+| `CLIENT_NAME` | Nome do host group no Zabbix (mesma convencao do `client_name` no Ansible) |
 | `ENABLE_ZABBIX` | `"true"` para enviar metricas, `"false"` para desligar o monitoramento |
 | `ZABBIX_SERVER` | FQDN ou IP do Zabbix Server |
 | `ZABBIX_PORT` | Porta do Trapper (padrao `10051`) |
 | `ZABBIX_HOSTNAME` | Precisa bater **exatamente** com o "Host name" cadastrado no passo 3.2 |
 | `ENABLE_ZABBIX_TLS` | `"true"` para usar PSK (recomendado); `"false"` envia em texto puro |
-| `ZABBIX_TLS_PSK_IDENTITY` | Identificador livre, usado tambem no cadastro do host (passo 3.3) |
+| `ZABBIX_TLS_PSK_IDENTITY` | Identificador livre, usado tambem no cadastro do host (passo 3.2) |
 | `ZABBIX_TLS_PSK_FILE` | Caminho do arquivo com a PSK gerada (ver 4.2) |
+| `ZABBIX_API_URL` | URL do `api_jsonrpc.php` do Zabbix Server (cadastro automatico, opcional) |
+| `ZABBIX_API_TOKEN` | Token gerado em Administration > API tokens (cadastro automatico, opcional) |
 
 ### 4.2 Gerar a PSK
 
@@ -91,9 +136,26 @@ sudo /usr/local/bin/backup-agent-generate-psk.sh
 ```
 
 O script cria `ZABBIX_TLS_PSK_FILE` (modo `600`) e imprime a **PSK identity**
-e a **PSK value** a copiar para a aba Encryption do host (passo 3.3). Se o
-arquivo ja existir, o script nao faz nada — apague-o primeiro para gerar
-uma PSK nova (e recadastre no Zabbix Server, a antiga fica invalida).
+e a **PSK value** a copiar para a aba Encryption do host (passo 3.2,
+alternativa manual) — so e necessario copiar isso a mao se voce **nao**
+estiver usando o cadastro automatico via API. Se o arquivo ja existir, o
+script nao faz nada — apague-o primeiro para gerar uma PSK nova (e
+recadastre no Zabbix Server, a antiga fica invalida).
+
+### 4.3 Cadastrar o host automaticamente (se `ZABBIX_API_URL`/`TOKEN` configurados)
+
+```bash
+sudo /usr/local/bin/backup-agent-zabbix-register.sh
+```
+
+Cria (ou atualiza) o host group, vincula o template **Backup Agent** e
+configura a Encryption PSK via API — ver secao 3.2. Sem
+`ZABBIX_API_URL`/`ZABBIX_API_TOKEN` configurados, o script nao faz nada
+(cadastro manual continua valendo).
+
+> **Caminho mais simples:** `sudo backup-agent.sh setup` (assistente de
+> primeira configuracao) ja pergunta esses campos e roda 4.2 e 4.3
+> automaticamente - ver `README.md` ou `docs/deployment.md`.
 
 ## 5. Testar antes de esperar o cron
 
@@ -196,6 +258,8 @@ rede/firewall/nome de host.
 
 - `devops/zabbix/template_backup_agent.xml` — definicao dos itens/triggers.
 - `os/linux/generate-psk.sh` — geracao da PSK.
-- `os/linux/backup-agent.sh` (funcao `send_zabbix`) — como cada item e enviado.
+- `os/linux/zabbix-register.sh` — cadastro automatico do host via API.
+- `os/linux/backup-agent.sh` (funcao `send_zabbix`, subcomando `setup`) —
+  como cada item e enviado, e o assistente de primeira configuracao.
 - [`docs/architecture.md`](architecture.md) — seguranca do canal (PSK vs. Vault PKI futuro).
 - [`docs/grafana-dashboards.md`](grafana-dashboards.md) — dashboard Grafana consolidado sobre esses dados.
