@@ -1,0 +1,35 @@
+# Provisioning do datasource Zabbix para o dashboard consolidado do
+# backup-agent. Requer o plugin alexanderzobnin-zabbix-app instalado no
+# Grafana (ver docker-compose.smoke.yml / docs/grafana-dashboards.md).
+#
+# Autenticacao via API Token do Zabbix (suportado desde Zabbix 5.4; o
+# template deste projeto e Zabbix 6.0): Administration > API tokens > Create
+# no Zabbix, usando um usuario dedicado e somente-leitura (ex.: grafana-reader)
+# com permissao de leitura nos host groups dos clientes que devem aparecer
+# no dashboard.
+#
+# GRAFANA_ZABBIX_API_TOKEN precisa estar definida no ambiente do container
+# Grafana antes de subir (nunca commitar o valor real aqui). Grafana expande
+# $VAR / ${VAR} em qualquer campo de provisioning a partir do ambiente do
+# processo — nao aceita sintaxe de default (":-") do shell.
+#
+# Em producao, troque a url abaixo pelo endereco real do Zabbix Server
+# (o mesmo ZABBIX_SERVER configurado em backup.env, com o path da API).
+apiVersion: 1
+
+datasources:
+  - name: Zabbix
+    type: alexanderzobnin-zabbix-datasource
+    access: proxy
+    uid: zabbix-backup-agent
+    url: http://zabbix-web:8080/api_jsonrpc.php
+    jsonData:
+      authType: token
+      trends: true
+      trendsFrom: "7d"
+      trendsRange: "4d"
+      dbConnectionEnable: false
+      alerting: false
+    secureJsonData:
+      apiToken: "${GRAFANA_ZABBIX_API_TOKEN}"
+    editable: false

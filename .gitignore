@@ -11,3 +11,7 @@ backup.env
 
 # Dependencias do semantic-release (npm) - package-lock.json fica versionado
 node_modules/
+
+# Snapshots PNG gerados por 'gcx dashboards snapshot' durante o
+# desenvolvimento do dashboard Grafana (ver devops/grafana/README.md)
+devops/grafana/snapshots/

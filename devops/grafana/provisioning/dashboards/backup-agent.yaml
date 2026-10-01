@@ -1,0 +1,16 @@
+# Carrega os dashboards versionados em devops/grafana/dashboards/*.json
+# automaticamente (arquivo -> Grafana), sem precisar importar manualmente
+# pela UI. Ver docs/grafana-dashboards.md.
+apiVersion: 1
+
+providers:
+  - name: backup-agent
+    orgId: 1
+    folder: Backup Agent
+    type: file
+    disableDeletion: false
+    editable: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

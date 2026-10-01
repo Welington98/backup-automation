@@ -1,0 +1,81 @@
+# Ambiente local para CONSTRUIR e TESTAR o dashboard Grafana antes de
+# aplicar em produção. Não é o Grafana de produção do backup-agent (ver
+# docs/grafana-dashboards.md para o fluxo de deploy real).
+#
+# Uso:
+#   docker compose -f devops/grafana/docker-compose.smoke.yml up -d
+#   docker compose -f devops/grafana/docker-compose.smoke.yml down -v   # limpar tudo
+#
+# Depois de subir:
+#   - Zabbix Web:  http://localhost:18080  (Admin / zabbix)
+#   - Grafana:     http://localhost:13000  (admin / admin)
+#
+# Portas 18080/13000 (em vez das portas padrao 8080/3000) para nao colidir
+# com outros servicos que já possam estar rodando na maquina do dev.
+
+services:
+  zabbix-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: zabbix
+      POSTGRES_DB: zabbix
+    volumes:
+      - zabbix-db-data:/var/lib/postgresql/data
+
+  zabbix-server:
+    image: zabbix/zabbix-server-pgsql:alpine-6.0-latest
+    depends_on:
+      - zabbix-db
+    environment:
+      DB_SERVER_HOST: zabbix-db
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: zabbix
+      POSTGRES_DB: zabbix
+    ports:
+      - "10051:10051"   # Trapper (zabbix_sender)
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-6.0-latest
+    depends_on:
+      - zabbix-server
+      - zabbix-db
+    environment:
+      DB_SERVER_HOST: zabbix-db
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: zabbix
+      POSTGRES_DB: zabbix
+      ZBX_SERVER_HOST: zabbix-server
+      PHP_TZ: America/Sao_Paulo
+    ports:
+      - "18080:8080"
+
+  # Servico separado (nao plugin in-process) porque o plugin
+  # grafana-image-renderer nao publica binario para linux-arm64 (Apple
+  # Silicon); a imagem Docker do renderer e multi-arch e funciona via HTTP.
+  renderer:
+    image: grafana/grafana-image-renderer:latest
+
+  grafana:
+    image: grafana/grafana-oss:12.4.3   # gcx requer Grafana >= 12.0.0
+    depends_on:
+      - zabbix-web
+      - renderer
+    environment:
+      GF_INSTALL_PLUGINS: alexanderzobnin-zabbix-app
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: alexanderzobnin-zabbix-datasource,alexanderzobnin-zabbix-app
+      GF_RENDERING_SERVER_URL: http://renderer:8081/render
+      GF_RENDERING_CALLBACK_URL: http://grafana:3000/
+      # Token gerado manualmente na UI do Zabbix (Administration > API tokens)
+      # apos o primeiro login, e usado pelo provisioning/datasources/zabbix.yaml
+      GRAFANA_ZABBIX_API_TOKEN: "${GRAFANA_ZABBIX_API_TOKEN:-}"
+    ports:
+      - "13000:3000"
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning
+      - ./dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+
+volumes:
+  zabbix-db-data:
+  grafana-data:
