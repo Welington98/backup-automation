@@ -17,15 +17,33 @@
       no Vaultwarden com todos os campos customizados esperados (ver
       README.md do cliente em devops/ansible/inventory/<cliente>/).
 
+- name: Habilitar repositorios adicionais (EPEL / Zabbix) fora do Debian/Ubuntu
+  ansible.builtin.import_tasks: setup-repos.yml
+
+- name: Determinar pacotes a instalar via gerenciador nativo
+  ansible.builtin.set_fact:
+    backup_agent_packages: >-
+      {{ (['restic'] if ansible_facts['distribution'] != 'Amazon' else ['bzip2'])
+         + ['zabbix-sender', 'curl', 'jq', 'openssl'] }}
+
 - name: Instalar pacotes necessarios
   package:
-    name:
-      - restic
-      - zabbix-sender
-      - curl
-      - jq
-      - openssl
+    name: "{{ backup_agent_packages }}"
     state: present
+
+- name: Instalar restic via binario oficial (Amazon Linux - sem EPEL binario-compativel)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    arch_suffix="amd64"
+    [ "{{ ansible_architecture }}" = "aarch64" ] && arch_suffix="arm64"
+    curl -fsSL -o /tmp/restic.bz2 "https://github.com/restic/restic/releases/download/\
+    v{{ backup_agent_restic_version }}/restic_{{ backup_agent_restic_version }}_linux_${arch_suffix}.bz2"
+    bzip2 -d -f /tmp/restic.bz2
+    install -m 755 /tmp/restic /usr/local/bin/restic
+  args:
+    creates: /usr/local/bin/restic
+    executable: /bin/bash
+  when: ansible_facts['distribution'] == 'Amazon'
 
 - name: Criar diretorio de configuracao e certs
   file:
@@ -86,3 +104,9 @@
     weekday: "{{ backup_agent_check_cron_weekday }}"
     job: "{{ backup_agent_bin_dir }}/backup-agent.sh check > /dev/null 2>&1"
     user: root
+
+- name: Garantir que o servico de cron esteja habilitado e iniciado
+  ansible.builtin.service:
+    name: "{{ 'cron' if ansible_facts['os_family'] == 'Debian' else 'crond' }}"
+    state: started
+    enabled: true
