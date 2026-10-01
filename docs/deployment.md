@@ -100,6 +100,22 @@ sudo chmod 700 /mnt/backup-local
 
 ### 2.3 Configurar `backup.env` e inicializar os repositorios
 
+**Caminho recomendado - assistente interativo:**
+
+```bash
+sudo backup-agent.sh setup
+```
+
+Pergunta a configuracao (senha do Restic oculta, sem aparecer na
+tela/historico, com opcao de gerar automaticamente via `openssl rand`),
+cria `backup.env`, inicializa os repositorios Restic (passo 2.2 ja feito),
+gera a PSK do Zabbix e, se voce informar `ZABBIX_API_URL`/`ZABBIX_API_TOKEN`
+no proprio assistente, ja cadastra o host no Zabbix Server via API (secao
+2.4 abaixo). Pule direto pra secao 2.5.
+
+<details>
+<summary>Alternativa manual (editar o arquivo a mao)</summary>
+
 ```bash
 sudo vi /etc/backup-agent/backup.env
 ```
@@ -146,7 +162,12 @@ restic -r "$REPO_LOCAL" cat config   # confirma que o repo existe
 > `KEEP_LOCAL_DAILY`. Garanta folga alem do tamanho total de
 > `BACKUP_TARGET_PATHS`.
 
+</details>
+
 ### 2.4 Configurar o canal Zabbix (TLS via PSK)
+
+Ja feito pelo `backup-agent.sh setup` (secao 2.3) se voce usou o
+assistente. Alternativa manual:
 
 ```bash
 sudo /usr/local/bin/backup-agent-generate-psk.sh
@@ -154,10 +175,15 @@ sudo /usr/local/bin/backup-agent-generate-psk.sh
 ```
 
 Cadastre esses valores no Zabbix Server: **Data collection > Hosts >
-`<host>` > Encryption > PSK**.
+`<host>` > Encryption > PSK** — ou, com um API token do Zabbix configurado
+em `ZABBIX_API_URL`/`ZABBIX_API_TOKEN` no `backup.env`, rode
+`sudo backup-agent-zabbix-register.sh` pra cadastrar automaticamente via
+API (cria o host, vincula o template e configura a Encryption PSK sem
+precisar copiar/colar nada).
 
-> Guia completo (importar o template, criar o host, testar o envio manual,
-> tabela de itens e troubleshooting): [`docs/zabbix-monitoring.md`](zabbix-monitoring.md).
+> Guia completo (importar o template, cadastro automatico vs. manual,
+> testar o envio, tabela de itens e troubleshooting):
+> [`docs/zabbix-monitoring.md`](zabbix-monitoring.md).
 
 ### 2.5 Testar
 
@@ -192,6 +218,7 @@ devops/ansible/
 ├── inventory/
 │   ├── README.md                   # como funciona o inventario multi-cliente
 │   ├── TEMPLATE-NOVO-CLIENTE.md    # passo a passo para adicionar um cliente
+│   ├── new-client.sh               # scaffold automatizado de cliente novo
 │   └── cliente_exemplo/            # um cliente = uma pasta autocontida
 │       ├── hosts.yml               # hosts + auth (exemplos de senha e chave SSH)
 │       ├── README.md
@@ -221,15 +248,13 @@ ha um `hosts.yml` unico para todos os clientes, estao em
 
 ### 3.1 Adicionar/configurar um cliente
 
-Para o primeiro cliente real, copie `inventory/cliente_exemplo/` (ver
+Para o primeiro cliente real, use o script de scaffold (ver
 [`TEMPLATE-NOVO-CLIENTE.md`](../devops/ansible/inventory/TEMPLATE-NOVO-CLIENTE.md)
 para o passo a passo completo):
 
 ```bash
 cd devops/ansible/inventory
-cp -r cliente_exemplo meu-cliente
-cd meu-cliente
-mv group_vars/cliente_exemplo.yml group_vars/meu-cliente.yml
+./new-client.sh meu-cliente "Meu Cliente Ltda"
 ```
 
 1. Edite `hosts.yml` com os hosts reais do cliente. Cada host escolhe seu
@@ -278,11 +303,13 @@ ansible-playbook -i inventory/meu-cliente/hosts.yml playbook.yml --check --diff
 ansible-playbook -i inventory/meu-cliente/hosts.yml playbook.yml --limit meu-cliente-srv-01
 ```
 
-> **Nota de seguranca:** a task que exibe a PSK gerada usa `debug`, que pode
-> ficar registrada em logs do Ansible/CI. Em ambientes com logging
-> centralizado, considere adicionar `no_log: true` a essa task
-> (`devops/ansible/roles/backup_agent/tasks/main.yml`) e distribuir a PSK
-> por um canal separado.
+> **Nota de seguranca:** as tasks que tocam segredo (render do `backup.env`,
+> geracao da PSK, cadastro automatico no Zabbix) usam `no_log: true`
+> (`devops/ansible/roles/backup_agent/tasks/main.yml`), entao nenhum valor
+> sensivel aparece em logs do Ansible/CI. Quando o cadastro automatico via
+> API nao esta configurado, a PSK gerada precisa ser lida direto no host
+> (`ssh <host> sudo cat <ZABBIX_TLS_PSK_FILE>`) pra cadastrar manualmente —
+> o playbook so avisa onde ela esta, nunca imprime o valor.
 
 ## 4. Cron
 

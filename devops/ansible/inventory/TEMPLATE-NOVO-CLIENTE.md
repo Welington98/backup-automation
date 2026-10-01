@@ -4,6 +4,23 @@ Guia passo a passo para adicionar um cliente ao `backup-agent`.
 
 ## Passo 1: Copiar a estrutura de exemplo
 
+Caminho recomendado - `new-client.sh` automatiza a copia, o rename e a
+substituicao do nome do cliente em todos os arquivos (ver
+[`new-client.sh`](new-client.sh)):
+
+```bash
+cd devops/ansible/inventory
+./new-client.sh meu-cliente "Meu Cliente Ltda"
+```
+
+O script cria a pasta `meu-cliente/` (mesmo nome em tudo - pasta, grupo do
+Ansible, arquivo `group_vars`, `client_name`, hosts, item do Vaultwarden) e
+imprime o checklist do que ainda falta (Passos 2-7 abaixo). Pule para o
+Passo 2.
+
+<details>
+<summary>Alternativa manual (sem o script)</summary>
+
 ```bash
 cd devops/ansible/inventory
 cp -r cliente_exemplo meu-cliente
@@ -14,6 +31,8 @@ mv group_vars/cliente_exemplo.yml group_vars/meu-cliente.yml
 > O nome do arquivo em `group_vars/` precisa ser igual ao nome do grupo do
 > cliente definido em `hosts.yml` (`meu-cliente`) para o Ansible carregar
 > as variaveis automaticamente.
+
+</details>
 
 ## Passo 2: Editar `hosts.yml`
 
@@ -78,6 +97,10 @@ Crie no Vaultwarden da empresa um item **Secure Note** chamado
   S3/Wasabi/B2/MinIO deste cliente.
 - `<host>_ssh_password` (um por host que usa autenticacao por senha, ex.
   `srv_01_ssh_password`) — apenas para hosts que nao usam chave SSH.
+- `zabbix_api_url` / `zabbix_api_token` (opcional) — so se for usar o
+  cadastro automatico do host no Zabbix via API em vez do cadastro manual
+  (descomente `vault_zabbix_api_url`/`vault_zabbix_api_token` no
+  `group_vars/meu-cliente.yml`, ver docs/zabbix-monitoring.md secao 3).
 
 Nao ha necessidade de `ansible-vault` nem de arquivo `.example` — o
 segredo mora so no Vaultwarden, o `group_vars/meu-cliente.yml` so guarda a
@@ -119,10 +142,12 @@ ansible-playbook -i inventory/meu-cliente/hosts.yml playbook.yml
 - [ ] `README.md` do cliente atualizado
 - [ ] Bucket S3/Wasabi/B2/MinIO do cliente ja existe e as credenciais funcionam
 - [ ] Repositorios Restic (local e nuvem) inicializados (`restic init`)
-- [ ] Host cadastrado no Zabbix Server com Encryption PSK (gerada por
+- [ ] Host cadastrado no Zabbix Server com Encryption PSK - automatico se
+      `zabbix_api_token` foi configurado no Passo 4 (a role chama
+      `backup-agent-zabbix-register.sh`), manual senao (PSK gerada por
       `backup-agent-generate-psk.sh` no primeiro deploy)
-- [ ] Host group no Zabbix Server = `client_name` deste cliente (necessario
-      para o dashboard Grafana consolidado, ver
+- [ ] Host group no Zabbix Server = `CLIENT_NAME`/`client_name` deste
+      cliente (necessario para o dashboard Grafana consolidado, ver
       `docs/grafana-dashboards.md`)
 - [ ] `ansible-inventory --list` e `ansible ... -m ping` validados
 - [ ] Dry-run (`--check --diff`) revisado antes do deploy real

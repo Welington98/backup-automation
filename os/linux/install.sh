@@ -238,6 +238,7 @@ touch "$LOG_FILE"
 echo "[INFO] Instalando scripts em $INSTALL_BIN..."
 install -m 750 "$SCRIPT_DIR/backup-agent.sh" "$INSTALL_BIN/backup-agent.sh"
 install -m 750 "$SCRIPT_DIR/generate-psk.sh" "$INSTALL_BIN/backup-agent-generate-psk.sh"
+install -m 750 "$SCRIPT_DIR/zabbix-register.sh" "$INSTALL_BIN/backup-agent-zabbix-register.sh"
 
 if [ ! -f "$CONFIG_DIR/backup.env" ]; then
     install -m 600 "$SCRIPT_DIR/backup.env.template" "$CONFIG_DIR/backup.env"
@@ -269,7 +270,15 @@ esac
 
 echo "[SUCCESS] Instalacao concluida."
 echo
-echo "Proximos passos:"
+echo "Proximo passo (recomendado):"
+echo "  sudo $INSTALL_BIN/backup-agent.sh setup"
+echo
+echo "O assistente interativo acima pergunta a configuracao (senha oculta,"
+echo "sem aparecer na tela/historico), inicializa os repositorios Restic,"
+echo "gera a PSK do Zabbix e, se voce informar ZABBIX_API_URL/token, ja"
+echo "cadastra o host no Zabbix Server via API."
+echo
+echo "Alternativa manual (sem o assistente):"
 echo "  1. Edite $CONFIG_DIR/backup.env"
 echo "  2. Inicialize o repositorio restic local:  restic -r <REPO_LOCAL> init"
 echo "  3. (Opcional) Inicialize o repositorio na nuvem: restic -r <REPO_CLOUD> init"

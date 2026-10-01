@@ -11,6 +11,7 @@
       - backup_agent_env.RESTIC_PASSWORD != 'CHANGE_ME'
       - not (backup_agent_env.ENABLE_CLOUD_SYNC == 'true' and backup_agent_env.AWS_ACCESS_KEY_ID == 'CHANGE_ME')
       - not (backup_agent_env.ENABLE_CLOUD_SYNC == 'true' and backup_agent_env.AWS_SECRET_ACCESS_KEY == 'CHANGE_ME')
+      - not (backup_agent_env.ENABLE_ZABBIX == 'true' and backup_agent_env.CLIENT_NAME == 'CHANGE_ME')
     fail_msg: >-
       Segredos nao definidos para {{ inventory_hostname }}. Confira se o
       item "backup-agent - {{ client_name | default('<cliente>') }}" existe
@@ -77,6 +78,12 @@
     dest: "{{ backup_agent_bin_dir }}/backup-agent-generate-psk.sh"
     mode: "0750"
 
+- name: Copiar script de cadastro automatico no Zabbix (via API)
+  copy:
+    src: "{{ role_path }}/../../../../os/linux/zabbix-register.sh"
+    dest: "{{ backup_agent_bin_dir }}/backup-agent-zabbix-register.sh"
+    mode: "0750"
+
 - name: Copiar lista de exclusoes
   copy:
     src: "{{ role_path }}/../../../../os/linux/excludes.txt"
@@ -88,6 +95,7 @@
     src: templates/backup.env.j2
     dest: "{{ backup_agent_config_dir }}/backup.env"
     mode: "0600"
+  no_log: true
 
 - name: Gerar PSK do Zabbix (se habilitado e ainda nao existir)
   command: "{{ backup_agent_bin_dir }}/backup-agent-generate-psk.sh"
@@ -96,11 +104,37 @@
   when: backup_agent_env.ENABLE_ZABBIX_TLS | default('false') == 'true'
   register: backup_agent_psk_result
   changed_when: "'SUCCESS' in backup_agent_psk_result.stdout"
+  no_log: true
 
-- name: Exibir PSK gerada (cadastrar manualmente no Zabbix Server)
+- name: Avisar que a PSK precisa ser cadastrada manualmente no Zabbix Server
+  # Nao usa 'debug: msg: psk_result.stdout_lines' de proposito - a task
+  # anterior tem no_log: true (a PSK nao pode vazar pro log/console do
+  # Ansible/CI), e isso tambem censura o valor pra qualquer task seguinte
+  # que tente exibi-lo. Por isso aqui so orientamos a ler o valor direto no
+  # host (unico lugar onde ele deveria aparecer em texto claro).
   debug:
-    msg: "{{ backup_agent_psk_result.stdout_lines }}"
-  when: backup_agent_psk_result is defined and backup_agent_psk_result.stdout is defined
+    msg: >-
+      PSK gerada em {{ backup_agent_env.ZABBIX_TLS_PSK_FILE }} no host
+      {{ inventory_hostname }}. Leia o valor direto no host (nunca via
+      log do Ansible): ssh {{ inventory_hostname }} sudo cat
+      {{ backup_agent_env.ZABBIX_TLS_PSK_FILE }} - depois cadastre em
+      Zabbix Server > Hosts > {{ backup_agent_env.ZABBIX_HOSTNAME }} >
+      Encryption (identity: {{ backup_agent_env.ZABBIX_TLS_PSK_IDENTITY }}).
+  when:
+    - backup_agent_env.ENABLE_ZABBIX_TLS | default('false') == 'true'
+    - not backup_agent_env.ZABBIX_API_TOKEN | default('')
+
+- name: Cadastrar host no Zabbix Server via API (se ZABBIX_API_URL/TOKEN estiverem definidos)
+  command: "{{ backup_agent_bin_dir }}/backup-agent-zabbix-register.sh"
+  when:
+    - backup_agent_env.ENABLE_ZABBIX | default('false') == 'true'
+    - backup_agent_env.ZABBIX_API_URL | default('')
+    - backup_agent_env.ZABBIX_API_TOKEN | default('')
+  register: backup_agent_zabbix_register_result
+  changed_when: >-
+    'criado' in backup_agent_zabbix_register_result.stdout or
+    'atualizado' in backup_agent_zabbix_register_result.stdout
+  no_log: true
 
 - name: Agendar execucao diaria via cron
   cron:

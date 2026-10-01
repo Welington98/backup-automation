@@ -42,6 +42,10 @@ backup_agent_env:
   KEEP_CLOUD_WEEKLY: 4
   KEEP_CLOUD_MONTHLY: 12
 
+  # Nome do host group no Zabbix - convencao do projeto e usar o mesmo
+  # valor de client_name (ver docs/grafana-dashboards.md).
+  CLIENT_NAME: "{{ client_name | default('CHANGE_ME') }}"
+
   ENABLE_ZABBIX: "true"
   ZABBIX_SERVER: "zabbix.suaempresa.com"
   ZABBIX_PORT: 10051
@@ -51,6 +55,13 @@ backup_agent_env:
   ENABLE_ZABBIX_TLS: "true"
   ZABBIX_TLS_PSK_IDENTITY: "backup-agent:{{ inventory_hostname }}"
   ZABBIX_TLS_PSK_FILE: "/etc/backup-agent/certs/zabbix.psk"
+
+  # Cadastro automatico do host no Zabbix Server via API (opcional). Os
+  # valores "vault_zabbix_api_*" vem do Vaultwarden, igual aos demais
+  # segredos - deixe os campos vazios no backup_agent_env do cliente para
+  # manter o cadastro manual (ver docs/zabbix-monitoring.md).
+  ZABBIX_API_URL: "{{ vault_zabbix_api_url | default('') }}"
+  ZABBIX_API_TOKEN: "{{ vault_zabbix_api_token | default('') }}"
 
 backup_agent_cron_hour: 3
 backup_agent_cron_minute: 30

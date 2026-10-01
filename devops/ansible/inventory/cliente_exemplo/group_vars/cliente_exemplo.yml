@@ -32,6 +32,15 @@ vault_aws_access_key: "{{ lookup('community.general.bitwarden', _bw_item, field=
 vault_aws_secret_key: "{{ lookup('community.general.bitwarden', _bw_item, field='aws_secret_key') | first }}"
 vault_srv_01_ssh_password: "{{ lookup('community.general.bitwarden', _bw_item, field='srv_01_ssh_password') | first }}"
 
+# Opcional (cadastro automatico do host no Zabbix via API, em vez do
+# cadastro manual na UI - ver docs/zabbix-monitoring.md secao 3): se quiser
+# usar, descomente as duas linhas abaixo e adicione os campos customizados
+# "zabbix_api_url"/"zabbix_api_token" no item do Vaultwarden. Deixando
+# comentado (como esta por padrao), ZABBIX_API_URL/TOKEN ficam vazios e o
+# cadastro manual continua valendo (roles/backup_agent/defaults/main.yml).
+# vault_zabbix_api_url: "{{ lookup('community.general.bitwarden', _bw_item, field='zabbix_api_url') | first }}"
+# vault_zabbix_api_token: "{{ lookup('community.general.bitwarden', _bw_item, field='zabbix_api_token') | first }}"
+
 backup_agent_env:
   RESTIC_PASSWORD: "{{ vault_restic_password }}"
   BACKUP_TARGET_PATHS: "/var/univention-backup,/home,/etc"
@@ -50,6 +59,8 @@ backup_agent_env:
   KEEP_CLOUD_WEEKLY: 4
   KEEP_CLOUD_MONTHLY: 12
 
+  CLIENT_NAME: "{{ client_name }}"
+
   ENABLE_ZABBIX: "true"
   ZABBIX_SERVER: "zabbix.suaempresa.com"
   ZABBIX_PORT: 10051
@@ -59,3 +70,8 @@ backup_agent_env:
   ENABLE_ZABBIX_TLS: "true"
   ZABBIX_TLS_PSK_IDENTITY: "backup-agent:{{ inventory_hostname }}"
   ZABBIX_TLS_PSK_FILE: "/etc/backup-agent/certs/zabbix.psk"
+
+  # Cadastro automatico via API (opcional, ver comentario acima sobre
+  # vault_zabbix_api_url/vault_zabbix_api_token) - vazio por padrao.
+  ZABBIX_API_URL: "{{ vault_zabbix_api_url | default('') }}"
+  ZABBIX_API_TOKEN: "{{ vault_zabbix_api_token | default('') }}"

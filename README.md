@@ -32,9 +32,9 @@ backup-agent/
 
 ```bash
 sudo os/linux/install.sh
-sudo vi /etc/backup-agent/backup.env
-restic -r <REPO_LOCAL> init
-sudo /usr/local/bin/backup-agent-generate-psk.sh
+sudo backup-agent.sh setup   # assistente interativo: pergunta a config,
+                              # inicializa os repositorios, gera a PSK e
+                              # (opcional) cadastra o host no Zabbix via API
 sudo /usr/local/bin/backup-agent.sh
 
 # listar os snapshots existentes (local e nuvem, sem mexer no backup.env na mao)

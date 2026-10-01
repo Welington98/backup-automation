@@ -58,9 +58,12 @@ repositorio, nem em texto puro nem criptografados — eles vem do
 Convencao: um item **Secure Note** por cliente, nomeado
 `backup-agent - <cliente>`, com um campo customizado por segredo (ex.:
 `restic_password`, `aws_access_key`, `aws_secret_key`,
-`srv_01_ssh_password`). Cada `group_vars/<cliente>.yml` referencia esse
-item via `lookup()` — veja `cliente_exemplo/group_vars/cliente_exemplo.yml`
-e o README do cliente para a lista exata de campos esperados.
+`srv_01_ssh_password` e, opcionalmente, `zabbix_api_url`/`zabbix_api_token`
+— so se for usar o cadastro automatico do host no Zabbix via API, ver
+`docs/zabbix-monitoring.md` secao 3). Cada `group_vars/<cliente>.yml`
+referencia esse item via `lookup()` — veja
+`cliente_exemplo/group_vars/cliente_exemplo.yml` e o README do cliente
+para a lista exata de campos esperados.
 
 Na maquina que roda o Ansible (control node), uma vez:
 
@@ -134,14 +137,23 @@ ansible-playbook -i inventory/<cliente>/hosts.yml playbook.yml --limit cliente-e
 
 ## Adicionar um novo cliente
 
-Ver [`TEMPLATE-NOVO-CLIENTE.md`](TEMPLATE-NOVO-CLIENTE.md), ou copiar a
-estrutura existente:
+Caminho recomendado - [`new-client.sh`](new-client.sh) automatiza a copia,
+o rename e a substituicao do nome do cliente:
+
+```bash
+cd devops/ansible/inventory
+./new-client.sh meu-novo-cliente "Meu Novo Cliente Ltda"
+# edite hosts.yml, group_vars/meu-novo-cliente.yml e README.md
+# crie o item "backup-agent - meu-novo-cliente" no Vaultwarden (ver secao Segredos)
+```
+
+Passo a passo completo (inclusive o que o script nao automatiza): ver
+[`TEMPLATE-NOVO-CLIENTE.md`](TEMPLATE-NOVO-CLIENTE.md). Alternativa manual,
+sem o script:
 
 ```bash
 cd devops/ansible/inventory
 cp -r cliente_exemplo meu-novo-cliente
 cd meu-novo-cliente
 mv group_vars/cliente_exemplo.yml group_vars/meu-novo-cliente.yml
-# edite hosts.yml, group_vars/meu-novo-cliente.yml e README.md
-# crie o item "backup-agent - meu-novo-cliente" no Vaultwarden (ver secao Segredos)
 ```
