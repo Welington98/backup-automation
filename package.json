@@ -1,6 +1,6 @@
 {
   "name": "backup-agent",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": true,
   "description": "Solucao corporativa white-label para automacao de backup, criptografia, sincronizacao em nuvem e telemetria em ambientes Linux on-premises e cloud.",
   "repository": {

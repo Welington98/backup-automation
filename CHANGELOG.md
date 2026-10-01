@@ -1,3 +1,15 @@
+# [1.6.0](https://github.com/Welington98/backup-automation/compare/v1.5.0...v1.6.0) (2026-10-01)
+
+
+### Bug Fixes
+
+* wrap overlong changed_when line in backup_agent role (yamllint) ([f882d46](https://github.com/Welington98/backup-automation/commit/f882d46e6de74a6e45b5719465d970b4fdd8379e))
+
+
+### Features
+
+* add Zabbix API auto-registration, setup wizard, and secret hardening ([eb51737](https://github.com/Welington98/backup-automation/commit/eb517374e019b486ef1635ed7ec063ad70ecc433))
+
 # [1.5.0](https://github.com/Welington98/backup-automation/compare/v1.4.0...v1.5.0) (2026-10-01)
 
 

@@ -6,7 +6,7 @@
 
 # Atualizado automaticamente pelo semantic-release a cada release (nao
 # editar a mao - ver .releaserc.json, plugin @semantic-release/exec).
-BACKUP_AGENT_VERSION="1.5.0"
+BACKUP_AGENT_VERSION="1.6.0"
 
 CONFIG_DIR="/etc/backup-agent"
 BIN_DIR="/usr/local/bin"
