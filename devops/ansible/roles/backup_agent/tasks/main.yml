@@ -131,7 +131,9 @@
     - backup_agent_env.ZABBIX_API_URL | default('')
     - backup_agent_env.ZABBIX_API_TOKEN | default('')
   register: backup_agent_zabbix_register_result
-  changed_when: "'criado' in backup_agent_zabbix_register_result.stdout or 'atualizado' in backup_agent_zabbix_register_result.stdout"
+  changed_when: >-
+    'criado' in backup_agent_zabbix_register_result.stdout or
+    'atualizado' in backup_agent_zabbix_register_result.stdout
   no_log: true
 
 - name: Agendar execucao diaria via cron
