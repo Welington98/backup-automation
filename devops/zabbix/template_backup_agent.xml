@@ -184,7 +184,7 @@
                     </triggers>
                 </item>
                 <item>
-                    <uuid>7e5d4b2a3c3c5d4bc9e1c8d3a8e1f1b4</uuid>
+                    <uuid>453577a4cbbf478f958516d5ba1d2923</uuid>
                     <name>Check Duration</name>
                     <type>TRAP</type>
                     <key>restic.check.duration</key>

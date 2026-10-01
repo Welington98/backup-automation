@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-shell:
+    name: Lint shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Syntax check (bash -n)
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS= read -r -d '' f; do
+            echo "== $f =="
+            bash -n "$f" || status=1
+          done < <(find os devops -name '*.sh' -print0)
+          exit $status
+
+      - name: ShellCheck
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS= read -r -d '' f; do
+            echo "== $f =="
+            shellcheck -x --severity=warning "$f" || status=1
+          done < <(find os devops -name '*.sh' -print0)
+          exit $status
+
+  lint-yaml:
+    name: Lint YAML
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: yamllint
+        run: yamllint -c .yamllint.yml .
+
+  validate-zabbix-template:
+    name: Validate Zabbix templates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate UUIDs and XML structure
+        run: python3 scripts/validate-zabbix-template.py
+
+  functional-test:
+    name: Functional test (backup-agent.sh)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install restic and jq
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y restic jq
+
+      - name: Run backup-agent.sh functional test
+        run: sudo os/linux/test/functional-test.sh
