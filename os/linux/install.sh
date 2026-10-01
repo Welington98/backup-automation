@@ -26,12 +26,19 @@ INSTALL_BIN="/usr/local/bin"
 CONFIG_DIR="/etc/backup-agent"
 LOG_FILE="/var/log/backup-agent.log"
 
-# Versao do repositorio oficial do Zabbix a habilitar no RHEL-family/Amazon
-# Linux. Mantida em 6.0 para bater com o schema de
+# Versao do repositorio oficial do Zabbix a habilitar no Debian/Ubuntu e no
+# RHEL-family. Mantida em 6.0 para bater com o schema de
 # devops/zabbix/template_backup_agent.xml (<version>6.0</version>) - ajuste
 # via variavel de ambiente se o Zabbix Server real do cliente for outra
 # major version.
 ZABBIX_REPO_VERSION="${ZABBIX_REPO_VERSION:-6.0}"
+
+# O Amazon Linux usa uma versao separada: a Zabbix nao publica um pacote de
+# conveniencia 'zabbix-release' para Amazon Linux na serie 6.0 (so a arvore
+# de pacotes crua, sem instalador), entao usamos a 7.0 so para habilitar o
+# repositorio ali. O protocolo trapper do zabbix_sender e compativel com um
+# Zabbix Server mais antigo, entao isso e seguro mesmo com servidor em 6.0.
+ZABBIX_REPO_VERSION_AMZN="${ZABBIX_REPO_VERSION_AMZN:-7.0}"
 
 # Versao do restic instalada via binario oficial no Amazon Linux (sem EPEL
 # binario-compativel - ver prepare_repos() abaixo).
@@ -96,6 +103,18 @@ detect_os() {
 
 prepare_repos() {
     case "$DISTRO_FAMILY" in
+        debian)
+            if ! dpkg -s zabbix-release >/dev/null 2>&1; then
+                echo "[INFO] Habilitando repositorio oficial do Zabbix (necessario para 'zabbix-sender')..."
+                command -v curl >/dev/null 2>&1 || apt-get install -y curl ca-certificates
+                local tmpdeb
+                tmpdeb="$(mktemp --suffix=.deb)"
+                curl -fsSL -o "$tmpdeb" "https://repo.zabbix.com/zabbix/${ZABBIX_REPO_VERSION}/${ID}/pool/main/z/zabbix-release/zabbix-release_latest_${ZABBIX_REPO_VERSION}+${ID}${VERSION_ID}_all.deb"
+                dpkg -i "$tmpdeb"
+                rm -f "$tmpdeb"
+                apt-get update -y
+            fi
+            ;;
         rhel)
             if ! rpm -q epel-release >/dev/null 2>&1; then
                 echo "[INFO] Habilitando EPEL (necessario para 'restic')..."
@@ -109,7 +128,7 @@ prepare_repos() {
         amzn)
             if ! rpm -q zabbix-release >/dev/null 2>&1; then
                 echo "[INFO] Habilitando repositorio oficial do Zabbix (Amazon Linux ${OS_MAJOR})..."
-                "${PKG_INSTALL[@]}" "https://repo.zabbix.com/zabbix/${ZABBIX_REPO_VERSION}/amazonlinux/${OS_MAJOR}/${ARCH}/zabbix-release-latest-${ZABBIX_REPO_VERSION}.amzn${OS_MAJOR}.noarch.rpm"
+                "${PKG_INSTALL[@]}" "https://repo.zabbix.com/zabbix/${ZABBIX_REPO_VERSION_AMZN}/amazonlinux/${OS_MAJOR}/${ARCH}/zabbix-release-latest-${ZABBIX_REPO_VERSION_AMZN}.amzn${OS_MAJOR}.noarch.rpm"
             fi
             # Sem EPEL no Amazon Linux (ver cabecalho do script); o restic e
             # instalado via binario oficial em install_restic_binary().
@@ -168,12 +187,27 @@ case "$DISTRO_FAMILY" in
         PACKAGES=(restic zabbix-sender curl jq cron openssl)
         ;;
     rhel)
-        PKG_INSTALL=("$PKG_MGR" install -y)
+        # --allowerasing (so dnf): imagens minimas RHEL8+/Rocky/Alma trazem
+        # 'curl-minimal' pre-instalado, que conflita com o pacote 'curl'
+        # completo - sem essa flag o dnf aborta em vez de substituir.
+        if [ "$PKG_MGR" = "dnf" ]; then
+            PKG_INSTALL=(dnf install -y --allowerasing)
+        else
+            PKG_INSTALL=(yum install -y)
+        fi
         PACKAGES=(restic zabbix-sender curl jq cronie openssl)
         ;;
     amzn)
-        PKG_INSTALL=("$PKG_MGR" install -y)
-        PACKAGES=(zabbix-sender curl jq cronie openssl bzip2)
+        if [ "$PKG_MGR" = "dnf" ]; then
+            PKG_INSTALL=(dnf install -y --allowerasing)
+        else
+            PKG_INSTALL=(yum install -y)
+        fi
+        # util-linux-core: fornece o 'flock' usado pelo backup-agent.sh -
+        # nao vem pre-instalado em imagens minimas de Amazon Linux (ao
+        # contrario de RHEL/Rocky/Alma/Debian/Ubuntu, onde ja faz parte da
+        # base).
+        PACKAGES=(zabbix-sender curl jq cronie openssl bzip2 util-linux-core)
         ;;
 esac
 

@@ -5,16 +5,25 @@
 ### Servidor cliente (Linux)
 - SO suportados:
   - **Debian/Ubuntu** (apt): Univention Corporate Server (UCS), Debian 10+,
-    Ubuntu 18.04+.
+    Ubuntu 18.04+. `zabbix-sender` **nao** esta nos repositorios padrao do
+    Debian/Ubuntu (ex.: Ubuntu 24.04) - o `install.sh`/a role Ansible
+    habilitam automaticamente o repositorio oficial do Zabbix
+    (repo.zabbix.com) antes de instalar os pacotes.
   - **RHEL/CentOS/Rocky Linux/AlmaLinux** (dnf/yum), 8+: o `install.sh`/a
     role Ansible habilitam automaticamente o repositorio EPEL (necessario
     para `restic`) e o repositorio oficial do Zabbix em repo.zabbix.com
     (necessario para `zabbix-sender` - o EPEL nao garante esse pacote de
-    forma confiavel entre versoes).
+    forma confiavel entre versoes). Em imagens minimas (containers, alguns
+    templates de nuvem) o pacote `curl` completo conflita com `curl-minimal`
+    pre-instalado - o install usa `dnf install --allowerasing` para resolver
+    isso automaticamente.
   - **Amazon Linux 2 e Amazon Linux 2023** (dnf/yum): `zabbix-sender` vem do
     repositorio oficial do Zabbix (pasta dedicada `amazonlinux/` em
-    repo.zabbix.com). O `restic` **nao** usa EPEL no Amazon Linux - a AWS
-    nao mantem build do EPEL binario-compativel com o AL2023, e o EPEL7
+    repo.zabbix.com), numa major version propria (padrao `7.0`, ver nota
+    abaixo) - a Zabbix nao publica um pacote de conveniencia
+    `zabbix-release` para Amazon Linux na serie 6.0 (so a arvore de pacotes
+    crua, sem instalador). O `restic` **nao** usa EPEL no Amazon Linux - a
+    AWS nao mantem build do EPEL binario-compativel com o AL2023, e o EPEL7
     usado no AL2 esta sem atualizacoes de seguranca desde 06/2024 - em vez
     disso, `install.sh`/a role baixam o binario oficial do restic
     (github.com/restic/restic/releases).
@@ -28,7 +37,12 @@
 - A versao do repositorio oficial do Zabbix habilitada (`ZABBIX_REPO_VERSION`
   no `install.sh`, `backup_agent_zabbix_repo_version` na role) deve bater
   com a major version real do Zabbix Server do cliente - o padrao e `6.0`,
-  alinhado ao schema de `devops/zabbix/template_backup_agent.xml`.
+  alinhado ao schema de `devops/zabbix/template_backup_agent.xml`. No Amazon
+  Linux essa versao e controlada separadamente
+  (`ZABBIX_REPO_VERSION_AMZN`/`backup_agent_zabbix_repo_version_amzn`,
+  padrao `7.0`, pelo motivo explicado acima) - o protocolo trapper do
+  `zabbix_sender` e compativel com um Zabbix Server mais antigo, entao isso
+  e seguro mesmo com servidor em `6.0`.
 - Armazenamento: disco secundario ou ponto de montagem NFS/iSCSI para o
   repositorio local.
 

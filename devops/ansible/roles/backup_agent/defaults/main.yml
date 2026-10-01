@@ -2,11 +2,18 @@
 backup_agent_config_dir: "/etc/backup-agent"
 backup_agent_bin_dir: "/usr/local/bin"
 
-# Versao do repositorio oficial do Zabbix a habilitar via setup-repos.yml nas
-# familias RHEL/Amazon Linux. Mantida em 6.0 para bater com o schema de
+# Versao do repositorio oficial do Zabbix a habilitar via setup-repos.yml no
+# Debian/Ubuntu e na familia RHEL. Mantida em 6.0 para bater com o schema de
 # devops/zabbix/template_backup_agent.xml (<version>6.0</version>) - ajuste
 # se o Zabbix Server real do cliente for outra major version.
 backup_agent_zabbix_repo_version: "6.0"
+
+# Amazon Linux usa uma versao separada: a Zabbix nao publica um pacote de
+# conveniencia 'zabbix-release' para Amazon Linux na serie 6.0 (so a arvore
+# de pacotes crua, sem instalador) - o protocolo trapper do zabbix_sender e
+# compativel com um Zabbix Server mais antigo, entao isso e seguro mesmo com
+# servidor 6.0.
+backup_agent_zabbix_repo_version_amzn: "7.0"
 
 # Versao do restic instalada via binario oficial do GitHub no Amazon Linux
 # (sem EPEL binario-compativel). Mantenha sincronizada com RESTIC_VERSION em

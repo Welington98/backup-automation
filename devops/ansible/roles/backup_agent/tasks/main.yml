@@ -17,19 +17,33 @@
       no Vaultwarden com todos os campos customizados esperados (ver
       README.md do cliente em devops/ansible/inventory/<cliente>/).
 
-- name: Habilitar repositorios adicionais (EPEL / Zabbix) fora do Debian/Ubuntu
+- name: Habilitar repositorios adicionais (Zabbix / EPEL)
   ansible.builtin.import_tasks: setup-repos.yml
 
 - name: Determinar pacotes a instalar via gerenciador nativo
   ansible.builtin.set_fact:
+    # util-linux-core (Amazon Linux): fornece o 'flock' usado pelo
+    # backup-agent.sh - nao vem pre-instalado em imagens minimas de Amazon
+    # Linux, ao contrario de RHEL/Rocky/Alma/Debian/Ubuntu.
     backup_agent_packages: >-
-      {{ (['restic'] if ansible_facts['distribution'] != 'Amazon' else ['bzip2'])
+      {{ (['restic'] if ansible_facts['distribution'] != 'Amazon' else ['bzip2', 'util-linux-core'])
          + ['zabbix-sender', 'curl', 'jq', 'openssl'] }}
 
-- name: Instalar pacotes necessarios
-  package:
+- name: Instalar pacotes necessarios (Debian/Ubuntu)
+  ansible.builtin.apt:
     name: "{{ backup_agent_packages }}"
     state: present
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Instalar pacotes necessarios (RHEL/CentOS/Rocky/Alma/Amazon Linux)
+  ansible.builtin.yum:
+    name: "{{ backup_agent_packages }}"
+    state: present
+    # imagens minimas RHEL8+/Rocky/Alma/Amazon Linux trazem 'curl-minimal'
+    # pre-instalado, que conflita com o pacote 'curl' completo - sem essa
+    # flag o dnf aborta em vez de substituir (ver os/linux/install.sh).
+    allowerasing: true
+  when: ansible_facts['os_family'] == 'RedHat'
 
 - name: Instalar restic via binario oficial (Amazon Linux - sem EPEL binario-compativel)
   ansible.builtin.shell: |

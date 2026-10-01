@@ -1,14 +1,43 @@
 ---
-# Habilita os repositorios adicionais necessarios para 'restic' e
-# 'zabbix-sender' fora do Debian/Ubuntu, espelhando a logica de
+# Habilita os repositorios adicionais necessarios para 'zabbix-sender' (e,
+# fora do Debian/Ubuntu, para 'restic'), espelhando a logica de
 # os/linux/install.sh (detect_os/prepare_repos):
+#   - Debian/Ubuntu: 'zabbix-sender' NAO esta nos repos padrao - precisa do
+#     repositorio oficial do Zabbix tambem (descoberto so depois que o CI
+#     passou a chamar o install.sh de verdade - ver PR #11).
 #   - RHEL/CentOS/Rocky/Alma: EPEL (restic) + repositorio oficial do Zabbix.
 #   - Amazon Linux: sem EPEL (a AWS nao mantem build binario-compativel com
 #     o AL2023, e o EPEL7 usado no AL2 esta sem atualizacoes de seguranca
-#     desde 06/2024) - so o repositorio oficial do Zabbix. O restic e
-#     instalado via binario oficial do GitHub em main.yml, DEPOIS da
-#     instalacao de pacotes (precisa de 'curl', que ainda nao existe neste
-#     ponto do playbook) - ver task "Instalar restic via binario oficial".
+#     desde 06/2024) - so o repositorio oficial do Zabbix, numa versao
+#     separada (backup_agent_zabbix_repo_version_amzn, default 7.0): a
+#     Zabbix nao publica um pacote de conveniencia 'zabbix-release' para
+#     Amazon Linux na serie 6.0 (so a arvore de pacotes crua, sem
+#     instalador). O protocolo trapper do zabbix_sender e compativel com um
+#     Zabbix Server mais antigo, entao isso e seguro mesmo com servidor 6.0.
+#     O restic e instalado via binario oficial do GitHub em main.yml,
+#     DEPOIS da instalacao de pacotes (precisa de 'curl', que ainda nao
+#     existe neste ponto do playbook) - ver task "Instalar restic via
+#     binario oficial".
+
+- name: Coletar fatos de pacotes instalados (Debian/Ubuntu)
+  ansible.builtin.package_facts:
+    manager: apt
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Habilitar repositorio oficial do Zabbix (Debian/Ubuntu)
+  ansible.builtin.apt:
+    deb: "https://repo.zabbix.com/zabbix/{{ backup_agent_zabbix_repo_version }}/\
+{{ ansible_distribution | lower }}/pool/main/z/zabbix-release/zabbix-release_latest_\
+{{ backup_agent_zabbix_repo_version }}+{{ ansible_distribution | lower }}{{ ansible_distribution_version }}_all.deb"
+  when:
+    - ansible_facts['os_family'] == 'Debian'
+    - "'zabbix-release' not in ansible_facts.packages"
+  register: backup_agent_zabbix_deb_result
+
+- name: Atualizar cache apt apos habilitar o repositorio do Zabbix
+  ansible.builtin.apt:
+    update_cache: true
+  when: backup_agent_zabbix_deb_result is changed
 
 - name: Determinar major version do SO (familia RedHat/Amazon)
   ansible.builtin.set_fact:
@@ -35,8 +64,8 @@
 
 - name: Habilitar repositorio oficial do Zabbix (Amazon Linux)
   ansible.builtin.yum:
-    name: "https://repo.zabbix.com/zabbix/{{ backup_agent_zabbix_repo_version }}/amazonlinux/\
+    name: "https://repo.zabbix.com/zabbix/{{ backup_agent_zabbix_repo_version_amzn }}/amazonlinux/\
 {{ ansible_distribution_major_version }}/{{ ansible_architecture }}/zabbix-release-latest-\
-{{ backup_agent_zabbix_repo_version }}.amzn{{ ansible_distribution_major_version }}.noarch.rpm"
+{{ backup_agent_zabbix_repo_version_amzn }}.amzn{{ ansible_distribution_major_version }}.noarch.rpm"
     state: present
   when: ansible_facts['distribution'] == 'Amazon'
