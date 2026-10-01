@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/Welington98/backup-automation/compare/v1.3.1...v1.4.0) (2026-10-01)
+
+
+### Features
+
+* add consolidated Grafana dashboard reading from Zabbix ([9670145](https://github.com/Welington98/backup-automation/commit/9670145b030e608a9021d93088eeaf3c68a5b870))
+
 ## [1.3.1](https://github.com/Welington98/backup-automation/compare/v1.3.0...v1.3.1) (2026-10-01)
 
 
