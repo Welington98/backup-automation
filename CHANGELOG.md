@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/Welington98/backup-automation/compare/v1.3.0...v1.3.1) (2026-10-01)
+
+
+### Bug Fixes
+
+* correct invalid UUIDv4 in restic check duration item ([ffef0b8](https://github.com/Welington98/backup-automation/commit/ffef0b8890a2056ae5cdecef7882089f3540df93))
+
 # [1.3.0](https://github.com/Welington98/backup-automation/compare/v1.2.0...v1.3.0) (2026-09-30)
 
 

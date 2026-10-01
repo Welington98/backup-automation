@@ -6,7 +6,7 @@
 
 # Atualizado automaticamente pelo semantic-release a cada release (nao
 # editar a mao - ver .releaserc.json, plugin @semantic-release/exec).
-BACKUP_AGENT_VERSION="1.3.0"
+BACKUP_AGENT_VERSION="1.3.1"
 
 print_help() {
     cat <<EOF
