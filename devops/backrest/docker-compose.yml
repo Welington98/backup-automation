@@ -1,0 +1,32 @@
+# Backrest centralizado: console Web para navegar snapshots e restaurar
+# arquivos dos repositorios Restic que os backup-agent dos clientes gravam
+# no S3 (REPO_CLOUD). Guia completo: docs/backrest.md
+#
+# Uso:
+#   cp .env.example .env   # ajuste TZ/porta/bind
+#   docker compose up -d
+#
+# As credenciais S3 e a senha do Restic de cada cliente NAO ficam aqui:
+# sao cadastradas por repositorio na UI (campo "Env Vars"), assim cada
+# cliente usa a sua propria chave/bucket.
+
+services:
+  backrest:
+    image: garethgeorge/backrest:${BACKREST_VERSION:-latest}
+    container_name: backrest-central
+    restart: always
+    # Por padrao so escuta em localhost: publique via reverse proxy com TLS
+    # (ver docs/backrest.md). Use BACKREST_BIND=0.0.0.0 apenas em rede interna.
+    ports:
+      - "${BACKREST_BIND:-127.0.0.1}:${BACKREST_PORT:-9898}:9898"
+    environment:
+      BACKREST_PORT: "9898"
+      BACKREST_DATA: /data
+      BACKREST_CONFIG: /config/config.json
+      XDG_CACHE_HOME: /cache
+      TZ: ${TZ:-America/Sao_Paulo}
+    volumes:
+      - ./data:/data                 # banco de operacoes/historico do Backrest
+      - ./config:/config             # config.json (repos, planos, usuarios)
+      - ./cache:/cache               # cache do Restic (acelera listagem/restore)
+      - /tmp/backrest-restores:/userdata  # destino de restores feitos pela UI

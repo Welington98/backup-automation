@@ -25,6 +25,7 @@ backup-agent/
 ├── devops/ansible/      # role de deploy automatizado
 ├── devops/zabbix/       # template Zabbix Trapper
 ├── devops/grafana/      # dashboard consolidado + provisioning (le do Zabbix)
+├── devops/backrest/     # console Web centralizada de restauracao (Backrest)
 └── docs/                # arquitetura, deployment, monitoramento Zabbix, disaster recovery
 ```
 
@@ -57,6 +58,7 @@ backup-agent.sh --help
 Passo a passo completo: [`docs/deployment.md`](docs/deployment.md).
 Configurar metricas no Zabbix: [`docs/zabbix-monitoring.md`](docs/zabbix-monitoring.md).
 Dashboard Grafana consolidado: [`docs/grafana-dashboards.md`](docs/grafana-dashboards.md).
+Console Web de restauracao (Backrest): [`docs/backrest.md`](docs/backrest.md).
 Procedimentos de recuperacao: [`docs/disaster-recovery.md`](docs/disaster-recovery.md).
 
 ## Atualizar o agente nos servidores

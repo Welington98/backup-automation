@@ -15,3 +15,9 @@ node_modules/
 # Snapshots PNG gerados por 'gcx dashboards snapshot' durante o
 # desenvolvimento do dashboard Grafana (ver devops/grafana/README.md)
 devops/grafana/snapshots/
+
+# Backrest (estado, config com segredos, cache)
+devops/backrest/data/
+devops/backrest/config/
+devops/backrest/cache/
+devops/backrest/.env
