@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/Welington98/backup-automation/compare/v1.6.0...v1.7.0) (2026-10-03)
+
+
+### Features
+
+* add centralized Backrest web console for restores ([e46e7ba](https://github.com/Welington98/backup-automation/commit/e46e7bad19bdd212dd9b89f498a679cdaea51c61))
+
 # [1.6.0](https://github.com/Welington98/backup-automation/compare/v1.5.0...v1.6.0) (2026-10-01)
 
 
